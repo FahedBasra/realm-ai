@@ -17,6 +17,7 @@ public/            what visitors download (this is the deploy directory)
 shared/api.js      ← ALL backend logic (chat, pricing config, webhook, health, limits)
 worker/index.js    Cloudflare Worker entry (serves /api/*, then public/ as static assets)
 functions/api/*    Cloudflare Pages Functions (same shared/api.js, same behaviour)
+netlify/*          optional Netlify mirror (netlify.toml + one function); Cloudflare is the main host
 wrangler.json      Worker config (assets dir, run_worker_first, compat date)
 supabase/schema.sql  accounts + chat storage + payment events (RLS enabled)
 tests/             npm test — API logic tests + a jsdom boot test of the real page
@@ -25,7 +26,10 @@ scripts/check.mjs  npm run check — deploy-breakage guard (CI runs both)
 
 ## Deploy on Cloudflare (10 minutes)
 
-Pick **one** of the two. Both behave identically because they share `shared/api.js`.
+Pick **one** of the two — both behave identically because they share `shared/api.js`.
+(Heads-up: this repo is *also* wired to a Netlify site called `reralm-ai`. If you keep that, `netlify.toml`
+now pins its publish dir to `public` and serves the same API, but set the secrets on whichever host
+actually serves your visitors — `A` or `B` — or the app will say "backend not connected" on the other one.)
 
 | | A · Cloudflare Workers (recommended) | B · Cloudflare Pages |
 |---|---|---|
@@ -67,7 +71,7 @@ npm install
 cp .dev.vars.example .dev.vars     # put your Gemini key here; .dev.vars is gitignored
 npm run dev                        # Worker + static assets  → http://localhost:8787
 npm run dev:pages                  # Pages Functions variant → http://localhost:8788
-npm test                           # structure check + 31 API tests + 32 jsdom UI checks
+npm test                           # structure check + 37 API tests + 32 jsdom UI checks
 ```
 
 ## Secrets / env reference

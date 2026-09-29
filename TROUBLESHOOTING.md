@@ -62,6 +62,15 @@ If `/api/health` answers, the API plumbing is fine and the problem is a secret/v
 | Worker logs full of `Unable to fetch the Request.cf object` | Local dev without network access to Cloudflare | Harmless; only affects `request.cf.country` (Paddle then auto-detects) |
 | `npx wrangler deploy` asks to create the worker / errors 10089 | No `CLOUDFLARE_API_TOKEN` or not logged in | `npx wrangler login`, or set the token in CI |
 
+## Netlify (if that host is still in use)
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `/` is 404 on Netlify but fine on workers.dev | the site publishes the repo root | `netlify.toml` pins `publish = "public"`; commit it and redeploy |
+| `404 function not found` on `/api/chat` | the `/api/*` redirect is missing, or the function didn't build | keep `[[redirects]] from = "/api/*"` and `node_bundler = "esbuild"` in `netlify.toml`; check the deploy log for the function listing |
+| Chat works on one host, not the other | secrets only exist in one provider | set `GEMINI_API_KEY` on the host that serves visitors (see `CLOUDFLARE.md` section C) |
+| Visitors are asked to sign in to Netlify | Deploy preview / site password protection | Site settings → Access & security → disable protection for public sites |
+
 ## Still stuck?
 
 ```bash

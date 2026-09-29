@@ -7,7 +7,7 @@
  */
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { handleApi, normalizeMessages, toContents, extractText, verifyPaddleSignature } from '../shared/api.js';
+import { handleApi, normalizeMessages, toContents, extractText, verifyPaddleSignature, ROUTES } from '../shared/api.js';
 
 const enc = new TextEncoder();
 let passed = 0;
@@ -282,5 +282,27 @@ await test('the whole API stays usable when the provider returns garbage', async
   assert.ok(!body.stack);
 });
 server.close();
+
+
+console.log('\nhost wrappers (Netlify mounts functions at a different path)');
+const netlifyHandler = (await import('../netlify/functions/api.mjs')).default;
+for (const route of ROUTES) {
+  await test(`${route} is reachable through /.netlify/functions/api`, async () => {
+    const path = '/.netlify/functions/api' + route.slice(4);
+    const res = await netlifyHandler(new Request(`https://realm.netlify.app${path}`, { method: route === '/api/chat' || route === '/api/paddle/webhook' ? 'POST' : 'GET', body: route === '/api/chat' || route === '/api/paddle/webhook' ? '{}' : undefined, headers: { 'content-type': 'application/json' } }), { env: EMPTY });
+    const json2 = await res.json();
+    assert.ok([200, 503].includes(res.status), `${route} -> ${res.status} ${JSON.stringify(json2)}`);
+    if (route !== '/api/health') assert.ok(json2.code, `${route} must return a machine-readable code`);
+  });
+}
+await test('the Netlify wrapper never answers 404 for a known API path', async () => {
+  const res = await netlifyHandler(new Request('https://realm.netlify.app/.netlify/functions/api/nope'), { env: EMPTY });
+  assert.equal(res.status, 404);
+  assert.equal((await res.json()).code, 'ROUTE_NOT_FOUND');
+});
+await test('missing env (context.env absent) degrades instead of crashing', async () => {
+  const res = await netlifyHandler(new Request('https://realm.netlify.app/.netlify/functions/api/chat', { method: 'POST', body: '{"messages":[{"role":"user","content":"hi"}]}', headers: { 'content-type': 'application/json' } }), {});
+  assert.equal(res.status, 503);
+});
 
 console.log(`\n${passed} test group(s) passed${process.exitCode ? ' — with failures' : ''}.\n`);

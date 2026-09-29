@@ -86,6 +86,26 @@ Notes that trip people up on Pages:
   two deployments pointing at one repo is how people end up "fixing" the wrong one.
 - Local equivalent of the Pages deploy: `npm run dev:pages` (uses the same `functions/` files).
 
+## C · You also have a Netlify site (`reralm-ai`)
+
+The repository is connected to Netlify as well, which is how two hosts end up serving one repo and only
+one of them gets the secrets. Two rules make that safe:
+
+- `netlify.toml` (committed) pins `publish = "public"` and `command = "npm run check"`, so a stale
+  dashboard setting can no longer publish the wrong directory — that misconfiguration is exactly what made
+  `/` 404 before.
+- `/api/*` is redirected to `netlify/functions/api.mjs`, which imports the same `shared/api.js`. There is
+  no second implementation to keep in sync, and `npm test` invokes the wrapper to prove it still routes.
+
+If Netlify is not the host you want, **delete that site** (or disable PR/build triggers) rather than
+leaving a stale copy of your "production" URL around. If it *is* the host you serve visitors from, add the
+secrets in Netlify (Site settings → Environment variables → *Secrets*) and use
+`reralm-ai.netlify.app` (or its custom domain) as the URL to test with `curl`.
+
+One thing Netlify can silently do to you: **Site settings → Access & security → General** has "Deploy
+previews / password" protection. If `...netlify.app` asks a visitor to sign in to Netlify, that switch is on
+for non-production deploys (or for the whole site) — turn it off for a public product.
+
 ## Secrets
 
 | Secret | Where it's read | If missing |

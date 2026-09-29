@@ -174,6 +174,19 @@ for (const f of scanFiles) {
 }
 if (exists('.dev.vars') && !exists('.gitignore')) errors.push('.dev.vars exists but there is no .gitignore — local secrets could be committed');
 
+/* ------------------------------------------------------------- netlify */
+// This repo is also connected to a Netlify site. A netlify.toml overrides the dashboard's
+// build settings, so a stale "publish = ." there can no longer produce a blank deploy.
+if (exists('netlify.toml')) {
+  const toml = read('netlify.toml');
+  const pub = (toml.match(/publish\s*=\s*"?([^"\n]+)"?/) || [])[1] || '';
+  if (assetsDir && pub.trim().replace(/^\.\//, '') !== assetsDir.replace(/\/+$/, '')) {
+    errors.push(`netlify.toml publishes "${pub.trim()}" but wrangler.json uses "${assetsDir}" — the two hosts would serve different trees`);
+  }
+  if (!toml.includes('/api/*')) errors.push('netlify.toml has no /api/* redirect, so the Netlify deploy has no chat API');
+  if (!exists('netlify/functions/api.mjs')) warnings.push('netlify.toml redirects /api/* but netlify/functions/api.mjs is missing');
+}
+
 /* --------------------------------------------------- setup leftovers */
 
 for (const [file, pattern, note] of [
