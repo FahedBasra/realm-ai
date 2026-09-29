@@ -54,8 +54,17 @@ const required = [
 for (const f of required) if (!exists(f)) errors.push(`missing file: ${f}`);
 
 // Cloudflare Pages: the site root is 404 unless an index.html exists in the output dir.
-if (fs.existsSync(path.join(root, 'index (2).html')) || fs.existsSync(path.join(root, 'index (1).html'))) {
-  errors.push('a browser-download filename like "index (2).html" is at the repo root — rename it to public/index.html or the site root will 404');
+for (const stray of ['index (2).html', 'index (1).html']) {
+  if (fs.existsSync(path.join(root, stray))) {
+    errors.push(`a browser-download filename like "${stray}" is at the repo root — rename it to public/index.html or the site root will 404`);
+  }
+}
+// An HTML file at the repo root is never served (publish dir is public/) but it *is* reachable on a host
+// configured with the wrong output dir, and a duplicate page is how the original 404 bug started here.
+for (const f of fs.readdirSync(root)) {
+  if (/\.html?$/i.test(f) && exists(f)) {
+    errors.push(`${f} sits at the repo root where nothing serves it — the app lives in public/. Delete it (or move it into public/) so a misconfigured host can never publish a second copy of the site`);
+  }
 }
 if (exists('index.html') && !exists('public/index.html')) {
   warnings.push('index.html is at the repo root; keep it in public/ and set the Pages output directory to public');
