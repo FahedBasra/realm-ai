@@ -1,0 +1,13 @@
+# Realm AI — robots.txt
+# Pointed at the live Netlify subdomain so indexing works the day the site goes public.
+# When you move to a custom domain, update this file, public/sitemap.xml and the canonical tag in
+# public/index.html together — one command does it:
+#   sed -i 's#reralm-ai.netlify.app#realm.ai#g' public/robots.txt public/sitemap.xml public/index.html
+# API routes are never crawlable because /api/* is disallowed below.
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /welcome.html
+
+Sitemap: https://reralm-ai.netlify.app/sitemap.xml

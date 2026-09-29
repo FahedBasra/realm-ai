@@ -1,0 +1,17 @@
+# local secrets for `npm run dev` — never commit
+.dev.vars
+.dev.vars.bak
+.env
+.env.*
+!.env.example
+
+# tooling
+node_modules/
+.wrangler/
+.wrangler-dev/
+dist/
+.DS_Store
+npm-debug.log*
+*.log
+.vscode/
+.idea/

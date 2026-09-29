@@ -1,0 +1,140 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Welcome — Realm AI</title>
+<meta name="robots" content="noindex,nofollow" />
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#050812;color:#f5f7ff;font-family:Inter,system-ui,sans-serif;text-align:center;padding:24px}
+.b{max-width:520px;width:100%}h1{font-size:30px;letter-spacing:-.03em;margin:0 0 10px}p{color:#91a0bb;line-height:1.6;font-size:14px}
+a{display:inline-block;margin-top:18px;padding:12px 22px;border-radius:12px;background:linear-gradient(135deg,#2aa9ff,#8b5cf6);color:#fff;text-decoration:none;font-weight:700}
+.card{margin-top:18px;text-align:left;border:1px solid #1f2c45;background:rgba(12,18,33,.9);border-radius:16px;padding:16px}
+.row{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:7px 0;border-bottom:1px dashed #1b2740}
+.row:last-child{border-bottom:0}
+.row span{color:#8fa0bd}.row b{font-weight:600;text-align:right}
+.state{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.02em;text-transform:uppercase}
+.dot{width:9px;height:9px;border-radius:50%;background:#ffca6b;box-shadow:0 0 0 4px rgba(255,202,107,.14)}
+.ok .dot{background:#3ddc97;box-shadow:0 0 0 4px rgba(61,220,151,.14)}
+.bad .dot{background:#ff7b8a;box-shadow:0 0 0 4px rgba(255,123,138,.14)}
+.note{font-size:11px;color:#7d8caa;margin-top:12px;line-height:1.6}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#8cbcff}
+</style></head>
+<body><div class="b">
+<h1 id="h">Welcome to Realm AI 🎉</h1>
+<p id="sub">Thanks for choosing Realm AI. We are confirming your payment with Paddle — this page updates itself.</p>
+<div class="card" id="card" hidden>
+  <div class="state" id="state"><i class="dot"></i><span id="stateText">Checking…</span></div>
+  <div style="margin-top:10px">
+    <div class="row"><span>Plan</span><b id="plan">—</b></div>
+    <div class="row"><span>Billing</span><b id="billing">—</b></div>
+    <div class="row"><span>Total</span><b id="total">—</b></div>
+    <div class="row"><span>Paddle status</span><b id="paddleStatus">—</b></div>
+    <div class="row"><span>Transaction</span><b class="mono" id="txn">—</b></div>
+  </div>
+  <div class="note" id="note"></div>
+</div>
+<a href="/index.html">Open Realm AI</a>
+<div class="note">Never share the link above with anyone — it identifies your purchase. <a href="https://paddle.com" style="padding:0;background:none;color:#8cbcff;text-decoration:underline">Paddle</a> sends the receipt by email.</div>
+<script>
+/* Live confirmation. The browser only supplies Paddle's transaction id (?_ptxn=... from the checkout
+   redirect); everything shown comes from our server asking Paddle, so nothing here can be forged.
+   If the id is missing (an email link, a redirect that dropped the query) the page offers a manual
+   lookup of the same endpoint instead of showing a dead-end thank-you.
+   If /api/checkout-status is unavailable (no PADDLE_API_KEY yet), it keeps its static message. */
+(function () {
+  var card = document.getElementById('card');
+  var VALID = /^txn_[a-z0-9]{26}$/i;
+
+  function setState(kind, text) {
+    var el = document.getElementById('state');
+    el.className = 'state' + (kind ? ' ' + kind : '');
+    document.getElementById('stateText').textContent = text;
+  }
+  function paint(d) {
+    document.getElementById('plan').textContent = d.plan || '\u2014';
+    document.getElementById('billing').textContent = d.billing === 'year' ? 'Yearly' : d.billing === 'month' ? 'Monthly' : '\u2014';
+    document.getElementById('total').textContent = d.total && d.currency ? d.total + ' ' + d.currency : '\u2014';
+    document.getElementById('paddleStatus').textContent = d.status || '\u2014';
+    if (d.paid) {
+      setState('ok', 'Payment confirmed');
+      document.getElementById('h').textContent = 'You are on ' + (d.plan || 'Realm AI') + ' \ud83c\udf89';
+      document.getElementById('sub').textContent = 'Payment confirmed by Paddle. Open your workspace and the plan applies to your account once accounts are switched on.';
+      document.getElementById('note').textContent = d.invoiceUrl ? 'Invoice: ' + d.invoiceUrl : 'A receipt is on its way to your email.';
+    } else if (d.status === 'canceled') {
+      setState('bad', 'Checkout cancelled');
+      document.getElementById('h').textContent = 'Checkout was cancelled';
+      document.getElementById('sub').textContent = 'No payment was taken. You can try again from the Plans page whenever you are ready.';
+      document.getElementById('note').textContent = '';
+    } else {
+      setState('', 'Awaiting confirmation');
+      document.getElementById('note').textContent = 'Paddle reports this transaction as "' + (d.status || 'pending') + '". Bank authorisation or a 3-D Secure step can take a minute \u2014 this page keeps checking.';
+    }
+  }
+
+  var tries = 0;
+  var timer = null;
+  function lookup(txn) {
+    card.hidden = false;
+    document.getElementById('txn').textContent = txn;
+    tries = 0;
+    if (timer) clearInterval(timer);
+    (async function poll() {
+      tries++;
+      var api = (window.REALM_API && window.REALM_API.url)
+        ? window.REALM_API.url('/api/checkout-status?txn=' + encodeURIComponent(txn))
+        : '/api/checkout-status?txn=' + encodeURIComponent(txn);
+      try {
+        var r = await fetch(api, { cache: 'no-store', headers: { Accept: 'application/json' } });
+        var ct = r.headers.get('content-type') || '';
+        if (ct.indexOf('json') === -1) throw new Error('no json');
+        var d = await r.json();
+        if (!r.ok) {
+          if (r.status === 503) {
+            document.getElementById('sub').textContent = 'Thanks! Paddle has your order; live confirmation needs PADDLE_API_KEY on the server. Your receipt is on its way by email.';
+            card.hidden = true;
+            return;
+          }
+          setState('bad', d.error || 'Could not confirm');
+          return;
+        }
+        paint(d);
+        if (d.paid || d.status === 'canceled' || tries > 6) return;
+      } catch (e) {
+        document.getElementById('sub').textContent = 'Thanks! We could not reach the confirmation service, but Paddle has your order and will email your receipt.';
+        card.hidden = true;
+        return;
+      }
+      timer = setTimeout(poll, tries < 3 ? 2500 : 5000);
+    })();
+  }
+
+  var q = new URLSearchParams(location.search);
+  var fromUrl = q.get('_ptxn') || q.get('txn') || '';
+  if (VALID.test(fromUrl)) return lookup(fromUrl);
+  if (fromUrl) document.getElementById('sub').textContent = 'That transaction id does not look like a Paddle id (txn_ followed by 26 letters/digits). Paste it from your receipt instead:';
+
+  /* No usable id: let the buyer look their own purchase up. Same endpoint, same rules. */
+  var box = document.createElement('div');
+  box.className = 'manual';
+  box.innerHTML =
+    '<label for="manualTxn">Checking a purchase without the redirect? Paste the transaction id from your Paddle receipt (starts with txn_).</label>' +
+    '<div class="manrow"><input id="manualTxn" class="input" type="text" inputmode="latin" autocapitalize="none" spellcheck="false" placeholder="txn_\u2026"><button id="manualGo" type="button" class="go">Check</button></div>' +
+    '<div class="err" id="manualErr"></div>';
+  document.querySelector('.b').insertBefore(box, card);
+  var input = document.getElementById('manualTxn');
+  var err = document.getElementById('manualErr');
+  function submit() {
+    var value = String(input.value || '').trim();
+    if (!VALID.test(value)) { err.textContent = 'That is not a Paddle transaction id \u2014 it should look like txn_ plus 26 characters.'; input.focus(); return; }
+    err.textContent = '';
+    lookup(value);
+  }
+  document.getElementById('manualGo').addEventListener('click', submit);
+  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+})();
+</script>
+<style>
+.manual{margin-top:16px;text-align:left;border:1px solid #1f2c45;background:rgba(12,18,33,.7);border-radius:16px;padding:14px}
+.manual label{display:block;font-size:12px;color:#8fa0bd;line-height:1.6;margin-bottom:9px}
+.manrow{display:flex;gap:8px}
+.input{flex:1;min-width:0;border:1px solid #2a3b58;background:#070d19;color:#eaf0ff;border-radius:10px;padding:10px 12px;font-size:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;outline:0}
+.input:focus{border-color:#4c7dff}
+.go{border:0;border-radius:10px;padding:10px 16px;font-weight:700;font-size:12px;cursor:pointer;background:linear-gradient(135deg,#2aa9ff,#8b5cf6);color:#fff}
+.err{min-height:15px;margin-top:8px;font-size:11px;color:#ff9aa6}
+</style>
+</div></body></html>

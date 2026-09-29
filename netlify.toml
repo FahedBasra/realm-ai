@@ -1,0 +1,55 @@
+# Netlify config for Realm AI.
+#
+# The repo is Cloudflare-first (Workers + static assets, or Pages Functions); this file exists
+# because this repository is also connected to a Netlify site, and it used to publish the repo
+# ROOT — where the site file was once named "index (2).html", so / 404'd.
+#
+# This file wins over the dashboard's build settings, so the publish directory can never drift:
+# the site lives in public/, and /api/* is served by netlify/functions/api.mjs.
+
+[build]
+  command = "npm run check"
+  publish = "public"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  # NOTE: no `timeout` key on purpose. Netlify caps Functions at 10 seconds on the free (Starter)
+  # plan, and setting `timeout = 26` here makes the *deploy fail during config validation* rather
+  # than just being ignored — learned the hard way on a real deploy. `timeout` only becomes usable
+  # on a paid plan (up to ~26-30s), and even then one AI answer can exceed it, so this project
+  # instead keeps every request short: the agent runs one phase per request, and api.mjs aborts the
+  # provider call at PROVIDER_TIMEOUT_MS (default 8000) so you get a readable message, not
+  # FUNCTION_TIMEOUT. Need longer answers? Put /api on a Cloudflare Worker (no wall-clock limit):
+  # CLOUDFLARE.md §D.
+
+# One function serves every API route; keep in sync with ROUTES in shared/api.js.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+  headers = { cache-control = "no-store" }
+
+# Pretty URLs for the two standalone pages.
+[[redirects]]
+  from = "/welcome"
+  to = "/welcome.html"
+  status = 301
+  force = false
+
+[[redirects]]
+  from = "/404"
+  to = "/404.html"
+  status = 200
+  force = false
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Never cache the API; keep the 1-hour default for the rest.
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
