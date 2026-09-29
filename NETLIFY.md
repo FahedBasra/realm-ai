@@ -1,14 +1,15 @@
 # Deploying Realm AI on Netlify (your current host)
 
 Free tier is enough for this project: `*.netlify.app` subdomain, HTTPS + custom domain, static hosting,
-and **Netlify Functions** for the API (125k invocations/month, 1024 MB memory, 26 s max duration).
+and **Netlify Functions** for the API (125k invocations/month, 1024 MB memory, **10 s** max duration on the
+free plan — see the ceiling section below; ~26-30 s only on paid plans).
 
 `netlify.toml` in this repo is the whole configuration — Netlify reads it instead of the dashboard, so
 nobody can accidentally set the wrong publish directory again:
 
 ```toml
 [build]  command = "npm run check"   publish = "public"
-[functions]  directory = "netlify/functions"  node_bundler = "esbuild"  timeout = 26
+[functions]  directory = "netlify/functions"  node_bundler = "esbuild"   # no `timeout` key: see below
 [[redirects]] from = "/api/*"  to = "/.netlify/functions/api/:splat"  status = 200  force = true
 ```
 
@@ -24,13 +25,25 @@ nobody can accidentally set the wrong publish directory again:
    | `GEMINI_API_KEY` | key from aistudio.google.com/apikey | chat + agent |
    | `GEMINI_MODEL` | `gemini-2.5-flash-lite` (default) or another model you have access to | optional |
    | `RATE_LIMIT_PER_MINUTE` | `20` | per-visitor guard |
-   | `PADDLE_ENV` / `PADDLE_CLIENT_TOKEN` | `sandbox` / `test_…` | billing (`PADDLE.md`) |
-   | `PADDLE_WEBHOOK_SECRET` | `trl_…` | payment webhooks |
-   | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | from Supabase | payment event log |
+   | `PADDLE_ENV` / `PADDLE_CLIENT_TOKEN` | `sandbox` / `test_…` | opening Paddle Checkout (`PADDLE.md`) |
+   | `PADDLE_API_KEY` | `pdl_sdbx…` (sandbox) | checkout confirmation + activating plans from webhooks |
+   | `PADDLE_WEBHOOK_SECRET` | `trl_…` | verifying payment webhooks |
+   | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | from Supabase | payment event log + plan activation |
 
    Tick **Confidential** for keys so they are masked in the UI, and add them to *all* contexts
    (production + deploy previews) — a preview build without them will report "backend not connected",
    which is a correct answer but a confusing one to debug.
+   Terminal version of the same thing (needs `npm i -g netlify-cli` once, then `netlify login` + `netlify link`):
+
+   ```bash
+   npx netlify env:set GEMINI_API_KEY '<paste>'      # no quotes inside, no trailing space
+   npx netlify env:set GEMINI_MODEL gemini-2.5-flash-lite
+   npx netlify env:set RATE_LIMIT_PER_MINUTE 20
+   ```
+
+   Prefer not to type them at all? `GEMINI_API_KEY=… npm run setup:gemini` validates the key against Google,
+   writes `.dev.vars` and prints the `env:set` lines for this site; `npm run setup` then lists what is missing.
+
 3. **Redeploy after adding variables** (Deploys → ⋯ → Redeploy). Netlify injects env vars at deploy time,
    so a running deploy keeps the old set.
 4. That's it: `https://<your-site>.netlify.app/` serves the app and `/api/*` is live.

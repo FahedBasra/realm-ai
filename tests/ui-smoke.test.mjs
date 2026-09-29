@@ -295,4 +295,105 @@ if (failures.length) {
   console.error(`\n${failures.length} UI check(s) failed:\n  - ${failures.join('\n  - ')}`);
   process.exitCode = 1;
 }
+
+console.log('\ncheckout confirmation page (welcome.html + ?_ptxn)');
+const TXN_ID = 'txn_' + 'a'.repeat(26);
+
+function welcomeFetch(mode) {
+  const hits = [];
+  const stub = async (url) => {
+    hits.push(String(url));
+    if (mode === 'paid') return json({ transactionId: TXN_ID, status: 'paid', paid: true, plan: 'Pro', billing: 'month', total: '15.00', currency: 'USD', subscriptionId: 'sub_1', invoiceUrl: 'https://paddle.test/invoice/1.pdf', statusUrl: 'https://paddle.test/r' });
+    if (mode === 'pending') return json({ transactionId: TXN_ID, status: 'pending', paid: false, plan: 'Pro', billing: 'month', total: '15.00', currency: 'USD' });
+    if (mode === 'canceled') return json({ transactionId: TXN_ID, status: 'canceled', paid: false });
+    if (mode === 'notconfigured') return json({ error: 'PADDLE_API_KEY is not set.', code: 'PADDLE_API_NOT_CONFIGURED' }, 503);
+    if (mode === 'notfound') return json({ error: 'Paddle has no such transaction in this environment. If you paid in sandbox, PADDLE_ENV must be "sandbox".', code: 'TRANSACTION_NOT_FOUND' }, 404);
+    if (mode === 'html') return { ok: true, status: 200, headers: { get: () => 'text/html' }, json: async () => { throw new Error('not json'); }, text: async () => '<html>proxy</html>' };
+    return json({ error: 'unexpected request in test: ' + url }, 500);
+  };
+  stub.hits = hits;
+  return stub;
+}
+
+async function bootWelcome(query, mode = 'paid') {
+  const html = fs.readFileSync(path.join(PUB, 'welcome.html'), 'utf8');
+  const problems = [];
+  const vc = new VirtualConsole();
+  vc.on('jsdomError', (e) => problems.push(`jsdom: ${e.message}`));
+  vc.on('error', (...a) => problems.push(`console.error: ${a.join(' ')}`));
+  const stub = welcomeFetch(mode);
+  const dom = new JSDOM(html, {
+    url: 'https://realm.test/welcome.html' + query,
+    runScripts: 'dangerously',
+    pretendToBeVisual: true,
+    virtualConsole: vc,
+    beforeParse(window) { window.fetch = stub; }
+  });
+  await new Promise((resolve) => {
+    if (dom.window.document.readyState === 'complete') return resolve();
+    dom.window.addEventListener('load', resolve, { once: true });
+    setTimeout(resolve, 1500);
+  });
+  return { dom, window: dom.window, document: dom.window.document, stub, problems };
+}
+
+await (async () => {
+  const paid = await bootWelcome('?_ptxn=' + TXN_ID, 'paid');
+  const d = paid.document;
+  check('a transaction id shows the confirmation card', d.getElementById('card').hidden === false);
+  await waitFor(() => d.getElementById('stateText').textContent === 'Payment confirmed');
+  check('the card reports a confirmed payment, not a guess', d.getElementById('stateText').textContent === 'Payment confirmed', d.getElementById('stateText').textContent);
+  check('the plan comes from Paddle, via the server', d.getElementById('plan').textContent === 'Pro', d.getElementById('plan').textContent);
+  check('the amount is the one Paddle charged', d.getElementById('total').textContent === '15.00 USD', d.getElementById('total').textContent);
+  check('the heading names the plan', /You are on Pro/.test(d.getElementById('h').textContent), d.getElementById('h').textContent);
+  check('the invoice link is shown', /invoice\/1\.pdf/.test(d.getElementById('note').textContent), d.getElementById('note').textContent);
+  check('only /api/checkout-status is called', paid.stub.hits.length === 1 && /\/api\/checkout-status\?txn=/.test(paid.stub.hits[0]), JSON.stringify(paid.stub.hits));
+  check('the transaction id is echoed in the card', d.getElementById('txn').textContent === TXN_ID);
+  paid.dom.window.close();
+
+  const naked = await bootWelcome('', 'paid');
+  check('without ?_ptxn the page still offers a way to confirm', naked.document.getElementById('manualGo') !== null && naked.document.getElementById('card').hidden === true);
+  check('and no request is made at all', naked.stub.hits.length === 0, JSON.stringify(naked.stub.hits));
+  // typing an id uses the same endpoint, so a receipt link is enough to see the plan
+  naked.document.getElementById('manualTxn').value = TXN_ID;
+  naked.document.getElementById('manualGo').click();
+  await waitFor(() => naked.document.getElementById('stateText').textContent === 'Payment confirmed');
+  check('a manually entered id is looked up and confirmed', naked.document.getElementById('plan').textContent === 'Pro' && naked.stub.hits.length === 1, JSON.stringify(naked.stub.hits));
+  check('the card appears only after that lookup', naked.document.getElementById('card').hidden === false);
+  naked.dom.window.close();
+
+  const junk = await bootWelcome('?_ptxn=hackme', 'paid');
+  check('a made-up transaction id is never sent to the API', junk.stub.hits.length === 0 && junk.document.getElementById('card').hidden === true);
+  check('and the page explains what a real id looks like', /26 letters\/digits/.test(junk.document.getElementById('sub').textContent), junk.document.getElementById('sub').textContent);
+  junk.document.getElementById('manualTxn').value = 'not-a-txn';
+  junk.document.getElementById('manualGo').click();
+  check('submitting junk is refused inline, with no request', /not a Paddle transaction id/.test(junk.document.getElementById('manualErr').textContent) && junk.stub.hits.length === 0, junk.document.getElementById('manualErr').textContent);
+  junk.dom.window.close();
+
+  const pend = await bootWelcome('?_ptxn=' + TXN_ID, 'pending');
+  await waitFor(() => /Awaiting confirmation/.test(pend.document.getElementById('stateText').textContent));
+  check('a pending payment says pending instead of "thank you for buying"', /Awaiting confirmation/.test(pend.document.getElementById('stateText').textContent), pend.document.getElementById('stateText').textContent);
+  check('and tells the buyer why (3-D Secure / bank)', /3-D Secure|authorisation/i.test(pend.document.getElementById('note').textContent), pend.document.getElementById('note').textContent);
+  pend.dom.window.close();
+
+  const canc = await bootWelcome('?_ptxn=' + TXN_ID, 'canceled');
+  await waitFor(() => /cancelled/i.test(canc.document.getElementById('h').textContent));
+  check('a cancelled checkout is stated plainly', /cancelled/i.test(canc.document.getElementById('h').textContent) && canc.document.getElementById('card').hidden === false, canc.document.getElementById('h').textContent);
+  canc.dom.window.close();
+
+  const off = await bootWelcome('?txn=' + TXN_ID, 'notconfigured');
+  check('no PADDLE_API_KEY: the page still thanks the buyer, quietly', off.document.getElementById('card').hidden === true && /PADDLE_API_KEY/.test(off.document.getElementById('sub').textContent), off.document.getElementById('sub').textContent);
+  off.dom.window.close();
+
+  const mixed = await bootWelcome('?_ptxn=' + TXN_ID, 'notfound');
+  await waitFor(() => /no such transaction/i.test(mixed.document.getElementById('stateText').textContent));
+  check('a sandbox payment checked against live keys explains itself', /sandbox/i.test(mixed.document.getElementById('stateText').textContent), mixed.document.getElementById('stateText').textContent);
+  mixed.dom.window.close();
+
+  const broken = await bootWelcome('?_ptxn=' + TXN_ID, 'html');
+  check('an HTML reply (proxy/captive portal) never prints a stack trace', broken.document.getElementById('card').hidden === true && /could not reach the confirmation service/i.test(broken.document.getElementById('sub').textContent), broken.document.getElementById('sub').textContent);
+  check('welcome.html boots without console errors', broken.problems.length === 0, broken.problems.join(' | '));
+  broken.dom.window.close();
+})();
+
 console.log(`\n${passed} UI check(s) passed.\n`);

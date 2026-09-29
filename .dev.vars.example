@@ -3,21 +3,29 @@
 # or `npx wrangler secret put NAME`) — never put real values in wrangler.json or any file
 # under public/, because the browser can read them.
 
+# Quickest way to fill this file correctly:  GEMINI_API_KEY=... npm run setup:gemini
+# (it validates the key against Google, picks a model that key can use, and writes it here)
+
 # --- AI (required for /api/chat) ---
-GEMINI_API_KEY=your-key-from-aistudio.google.com
+GEMINI_API_KEY=your-key-from-aistudio.google.com/apikey
 GEMINI_MODEL=gemini-2.5-flash-lite
 # GEMINI_MODEL_FALLBACK=gemini-2.5-flash
 # GEMINI_TEMPERATURE=0.4
 # GEMINI_MAX_TOKENS=2048
 # GEMINI_THINKING_BUDGET=0
-# PROVIDER_TIMEOUT_MS=55000     # Netlify's wrapper defaults this to 21000 (26s function ceiling)
+# PROVIDER_TIMEOUT_MS=55000     # ms before we abort the provider call. The Netlify wrapper lowers
+#                               # this to 8000 by itself, because free-plan functions are killed at 10s.
 
 # --- Billing / Paddle (optional; pricing stays in preview mode without these) ---
 # PADDLE_ENV=sandbox            # sandbox | production
 # PADDLE_CLIENT_TOKEN=test_xxx  # must start with test_ when PADDLE_ENV=sandbox, live_ when production
-# PADDLE_WEBHOOK_SECRET=trl_... # Paddle > Developer tools > Notifications > signing secret
+# PADDLE_API_KEY=pdl_sdbx_xxx   # server-side key (contains _sdbx in sandbox). Enables
+#                               # GET /api/checkout-status and webhook plan activation. A SECRET.
+# PADDLE_WEBHOOK_SECRET=trl_... # Paddle > Developer tools > Webhooks > signing secret
+# PADDLE_API_BASE=              # override only: http://127.0.0.1:9123 for the offline mock
+# WEBHOOK_ACTIVATE=0            # verify + log events but do not touch Supabase tables
 
-# --- Supabase (optional; webhook event journal) ---
+# --- Supabase (optional; payment event journal + plan activation) ---
 # SUPABASE_URL=https://xxxx.supabase.co
 # SUPABASE_SERVICE_ROLE_KEY=eyJ...
 

@@ -7,7 +7,7 @@
  */
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { handleApi, normalizeMessages, toContents, extractText, verifyPaddleSignature, parseJsonObject, ROUTES } from '../shared/api.js';
+import { handleApi, normalizeMessages, toContents, extractText, verifyPaddleSignature, parseJsonObject, paddleApiBase, applyWebhookEvent, ROUTES } from '../shared/api.js';
 
 const enc = new TextEncoder();
 let passed = 0;
@@ -187,15 +187,31 @@ console.log('\nGemini integration (against a local mock provider)');
 
 /** Records every request the route makes so we can assert on headers + body shape. */
 const seen = [];
+const sbWrites = [];
 let mockMode = 'ok';
+let paddleMode = 'ok';
+/* Paddle ids are `prefix_` + 26 chars; the last route segment's 5th char picks the fixture. */
+const TXN = {
+  a: { id: 'txn_aaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'paid', currency_code: 'USD', subtotal: '15.00', custom_data: { tier: 'Pro', billing: 'month' }, customer_id: 'ctm_1', subscription_id: 'sub_1', updated_at: '2026-09-29T10:00:00.000Z', invoice: { url: 'https://paddle.test/invoice/1.pdf' }, status_url: 'https://paddle.test/receipt/a', details: { totals: { grand_total: '15.00', tax: '0.00' } }, items: [{ price: { description: 'Realm AI Pro (monthly)' }, quantity: 1 }] },
+  b: { id: 'txn_bbbbbbbbbbbbbbbbbbbbbbbbbb', status: 'pending', currency_code: 'USD', subtotal: '15.00', custom_data: { tier: 'Pro', billing: 'month' }, items: [], details: {} },
+  c: { id: 'txn_cccccccccccccccccccccccccc', status: 'canceled', currency_code: 'USD', custom_data: { tier: 'Pro', billing: 'year' }, items: [], details: {} }
+};
 const server = http.createServer((req, res) => {
   let body = '';
   req.on('data', (c) => (body += c));
   req.on('end', () => {
     let parsed = {};
     try { parsed = JSON.parse(body); } catch {}
-    seen.push({ url: req.url, headers: req.headers, body: parsed });
-    const send = (status, obj) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)); };
+    seen.push({ url: req.url, headers: req.headers, method: req.method, body: parsed });
+    const send = (status, obj) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(status === 204 ? '' : JSON.stringify(obj)); };
+    const route = req.url.split('?')[0];
+    if (route.startsWith('/rest/v1/')) { sbWrites.push({ method: req.method, route, query: req.url.slice(route.length), row: parsed, prefer: req.headers.prefer, auth: req.headers.authorization }); return send(req.method === 'POST' ? 201 : 204, req.method === 'POST' ? [parsed] : {}); }
+    if (route.startsWith('/transactions/')) {
+      if (paddleMode === '404') return send(404, { error: { code: 'not_found', message: 'Transaction not found' } });
+      if (paddleMode === '401') return send(401, { error: { code: 'unauthorized', message: 'This API key is not valid in this environment' } });
+      return send(200, { data: TXN[route.split('/').pop().slice(4, 5)] || TXN.a });
+    }
+    if (route.startsWith('/customers/')) return send(200, { data: { id: route.split('/').pop(), email: 'buyer@example.com' } });
     if (mockMode === 'agent-plan') return send(200, { candidates: [{ content: { parts: [{ text: '{"steps":[{"title":"Research","detail":"collect facts"},{"title":"Draft","detail":"write the plan"},{"title":"Review","detail":"check gaps"}],"deliverable":"A day-by-day plan","missing":""}' }] }, finishReason: 'STOP' }] });
     if (mockMode === 'agent-prose') return send(200, { candidates: [{ content: { parts: [{ text: 'Here is what I would do: first gather the facts, then write the plan. I will keep it short and practical for a student team.' }] }, finishReason: 'STOP' }] });
     if (mockMode === 'agent-many') return send(200, { candidates: [{ content: { parts: [{ text: JSON.stringify({ steps: [{}, { title: 'a', detail: 'x' }, { title: 'b' }, { title: 'c' }, { title: 'd' }, { title: 'e' }, { title: 'f' }, { title: 'g' }, { title: 'h' }], deliverable: 'd' }) }] } }] });
@@ -303,7 +319,8 @@ console.log('\nhost wrappers (Netlify mounts functions at a different path)');
 const netlifyHandler = (await import('../netlify/functions/api.mjs')).default;
 for (const route of ROUTES) {
   await test(`${route} is reachable through /.netlify/functions/api`, async () => {
-    const path = '/.netlify/functions/api' + route.slice(4);
+    // checkout-status needs a syntactically real transaction id, otherwise the 400 is the right answer
+    const path = '/.netlify/functions/api' + route.slice(4) + (route === '/api/checkout-status' ? `?txn=txn_${'a'.repeat(26)}` : '');
     const res = await netlifyHandler(new Request(`https://realm.netlify.app${path}`, { method: ['/api/chat', '/api/agent', '/api/paddle/webhook'].includes(route) ? 'POST' : 'GET', body: ['/api/chat', '/api/agent', '/api/paddle/webhook'].includes(route) ? '{}' : undefined, headers: { 'content-type': 'application/json' } }), { env: EMPTY });
     const json2 = await res.json();
     assert.ok([200, 503].includes(res.status), `${route} -> ${res.status} ${JSON.stringify(json2)}`);
@@ -420,5 +437,130 @@ await test('provider failures inside a run surface as retryable errors', async (
   assert.equal(status, 429);
   assert.equal(body.code, 'PROVIDER_RATE_LIMIT');
 });
+
+console.log('\nPaddle: checkout confirmation (GET /api/checkout-status)');
+const payEnv = (extra = {}) => envWith({ PADDLE_API_BASE: base, PADDLE_API_KEY: 'pdl_sdbxTESTKEY', ...extra });
+const statusOf = async (txn, env = payEnv()) => {
+  const res = await handleApi(new Request(`https://realm.test/api/checkout-status${txn ? `?txn=${txn}` : ''}`, { headers: { origin: 'https://realm.netlify.app' } }), env);
+  return { status: res.status, body: await res.json().catch(() => ({})) };
+};
+await test('refuses a made-up transaction id instead of calling Paddle', async () => {
+  seen.length = 0;
+  const { status, body } = await statusOf('txn_1', payEnv());
+  assert.equal(status, 400);
+  assert.equal(body.code, 'BAD_TRANSACTION_ID');
+  assert.equal(seen.length, 0, 'must not forward garbage to Paddle');
+});
+await test('503 with a clear code when the server has no Paddle key', async () => {
+  const { status, body } = await statusOf('txn_aaaaaaaaaaaaaaaaaaaaaaaaaa', envWith());
+  assert.equal(status, 503);
+  assert.equal(body.code, 'PADDLE_API_NOT_CONFIGURED');
+});
+await test('a paid transaction becomes a plan confirmation, in USD totals', async () => {
+  seen.length = 0; paddleMode = 'ok';
+  const { status, body } = await statusOf('txn_aaaaaaaaaaaaaaaaaaaaaaaaaa');
+  assert.equal(status, 200);
+  assert.equal(body.paid, true);
+  assert.equal(body.plan, 'Pro', 'plan comes from the customData we attach at checkout');
+  assert.equal(body.total, '15.00');
+  assert.equal(body.currency, 'USD');
+  assert.equal(body.invoiceUrl, 'https://paddle.test/invoice/1.pdf');
+  const req = seen[0];
+  assert.equal(req.method, 'GET');
+  assert.match(req.url, /^\/transactions\/txn_a/);
+  assert.equal(req.headers.authorization, 'Bearer pdl_sdbxTESTKEY');
+});
+await test('pending and canceled stay pending/canceled (no false promise)', async () => {
+  assert.equal((await statusOf('txn_bbbbbbbbbbbbbbbbbbbbbbbbbb')).body.paid, false);
+  assert.equal((await statusOf('txn_bbbbbbbbbbbbbbbbbbbbbbbbbb')).body.status, 'pending');
+  assert.equal((await statusOf('txn_cccccccccccccccccccccccccc')).body.status, 'canceled');
+});
+await test('a sandbox payment looked up with live keys explains the mismatch', async () => {
+  paddleMode = '404';
+  const { status, body } = await statusOf('txn_dddddddddddddddddddddddddd');
+  assert.equal(status, 404);
+  assert.equal(body.code, 'TRANSACTION_NOT_FOUND');
+  assert.match(body.error, /sandbox/i);
+  paddleMode = '401';
+  const bad = await statusOf('txn_aaaaaaaaaaaaaaaaaaaaaaaaaa');
+  assert.equal(bad.status, 502);
+  assert.match(bad.body.error, /environment/i);
+  paddleMode = 'ok';
+});
+await test('health advertises the payment capabilities that are on', async () => {
+  const res = await handleApi(new Request('https://realm.test/api/health'), payEnv({ SUPABASE_URL: base, SUPABASE_SERVICE_ROLE_KEY: 'sb_test', PADDLE_WEBHOOK_SECRET: 'trl_x' }));
+  const body = await res.json();
+  assert.equal(body.billing.serverKeyConfigured, true);
+  assert.equal(body.billing.activation, 'on');
+  const bare = await handleApi(new Request('https://realm.test/api/health'), EMPTY);
+  assert.equal((await bare.json()).billing.activation, 'log-only');
+});
+
+console.log('\nPaddle webhook → plan activation in Supabase');
+const webhook = async (event, env) => {
+  const body = JSON.stringify(event);
+  const ts = Math.floor(Date.now() / 1000);
+  const res = await handleApi(new Request('https://realm.test/api/paddle/webhook', {
+    method: 'POST', body,
+    headers: { 'content-type': 'application/json', 'paddle-signature': `ts=${ts};v1=${await sign('whsec_test', ts, body)}` }
+  }), env);
+  return { status: res.status, body: await res.json() };
+};
+const sbEnv = (extra = {}) => ({ PADDLE_WEBHOOK_SECRET: 'whsec_test', SUPABASE_URL: base, SUPABASE_SERVICE_ROLE_KEY: 'sb_test', PADDLE_API_KEY: 'pdl_sdbxTESTKEY', PADDLE_API_BASE: base, RATE_LIMIT_PER_MINUTE: 0, ...extra });
+await test('transaction.paid stores the payment and sets the plan by email', async () => {
+  sbWrites.length = 0;
+  const { status, body } = await webhook({
+    event_id: 'evt_10', event_type: 'transaction.paid',
+    data: { id: 'txn_aaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'paid', currency_code: 'USD', customer_id: 'ctm_1', updated_at: '2026-09-29T10:00:00.000Z', custom_data: { tier: 'Pro' }, details: { totals: { grand_total: '15.00' } } }
+  }, sbEnv());
+  assert.equal(status, 200);
+  assert.equal(body.activation, 'activate');
+  assert.ok(body.actions.some((a) => /^payment:ok/.test(a)), JSON.stringify(body.actions));
+  const payment = sbWrites.find((w) => w.route === '/rest/v1/payments');
+  assert.equal(payment.method, 'POST');
+  assert.equal(payment.row.status, 'paid');
+  assert.equal(payment.row.email, 'buyer@example.com', 'customer id is resolved to the email that owns the profile');
+  assert.match(payment.prefer, /merge-duplicates/, 'Paddle retries events, so the insert must be idempotent');
+  const plan = sbWrites.find((w) => w.route.startsWith('/rest/v1/profiles'));
+  assert.equal(plan.method, 'PATCH');
+  assert.match(plan.query, /email=eq\./);
+  assert.equal(plan.row.plan, 'pro', 'stored lowercase to match profiles.plan');
+});
+await test('a subscription row is upserted against (provider, provider_ref)', async () => {
+  sbWrites.length = 0;
+  const { body } = await webhook({
+    event_id: 'evt_11', event_type: 'subscription.updated',
+    data: { id: 'sub_1', status: 'active', customer_id: 'ctm_1', custom_data: { tier: 'starter' }, current_billing_period: { ends_at: '2026-10-29T00:00:00.000Z' }, items: [{ price: { description: 'Realm AI starter (monthly)' } }] }
+  }, sbEnv());
+  const sub = sbWrites.find((w) => w.route === '/rest/v1/subscriptions');
+  assert.equal(sub.method, 'POST');
+  assert.match(sub.prefer, /on_conflict=provider,provider_ref/);
+  assert.equal(sub.row.plan, 'starter');
+  assert.equal(sub.row.current_period_end, '2026-10-29T00:00:00.000Z');
+  assert.ok(body.actions.some((a) => /^subscription:ok/.test(a)));
+});
+await test('a cancellation drops the plan back to free', async () => {
+  sbWrites.length = 0;
+  await webhook({ event_id: 'evt_12', event_type: 'subscription.canceled', data: { id: 'sub_1', status: 'canceled', customer_id: 'ctm_1', items: [] } }, sbEnv());
+  const plan = sbWrites.find((w) => w.route.startsWith('/rest/v1/profiles'));
+  assert.equal(plan.row.plan, 'free');
+});
+await test('the event row is marked processed, and a DB outage never breaks the ack', async () => {
+  sbWrites.length = 0;
+  const { status, body } = await webhook({ event_id: 'evt_13', event_type: 'transaction.paid', data: { id: 'txn_aaaaaaaaaaaaaaaaaaaaaaaaaa', status: 'paid', details: { totals: { grand_total: '1.00' } } } }, sbEnv());
+  assert.equal(status, 200);
+  assert.ok(sbWrites.some((w) => w.route.startsWith('/rest/v1/payment_events') && w.method === 'PATCH'), 'processed_at is stamped');
+  const offline = await webhook({ event_id: 'evt_14', event_type: 'transaction.paid', data: { id: 'txn_a', status: 'paid' } }, { ...sbEnv(), SUPABASE_URL: 'http://127.0.0.1:1' });
+  assert.equal(offline.status, 200, 'Paddle must not retry forever because our database is down');
+  assert.ok(offline.body.actions.every((a) => /failed/.test(a)), JSON.stringify(offline.body.actions));
+});
+await test('WEBHOOK_ACTIVATE=0 keeps verification on but touches no table', async () => {
+  sbWrites.length = 0;
+  const { body } = await webhook({ event_id: 'evt_15', event_type: 'transaction.paid', data: { id: 'txn_a', status: 'paid' } }, sbEnv({ WEBHOOK_ACTIVATE: '0' }));
+  assert.equal(body.activation, 'disabled');
+  assert.deepEqual(body.actions, []);
+  assert.equal(sbWrites.filter((w) => w.route === '/rest/v1/payments').length, 0);
+});
+
 server.close();
 console.log(`\n${passed} test group(s) passed${process.exitCode ? ' — with failures' : ''}.\n`);

@@ -28,6 +28,9 @@
  *   PADDLE_CLIENT_TOKEN       Paddle client-side token (test_... or live_...)
  *   PADDLE_PRICE_IDS          optional "month=pri_x,year=pri_y" list, for validating tiers
  *   PADDLE_WEBHOOK_SECRET     shared secret used to verify Paddle notification signatures
+ *   PADDLE_API_KEY            (optional) server-side key, contains `_sdbx` in sandbox. Enables
+ *                             GET /api/checkout-status and webhook-driven plan activation.
+ *                             Keep it as a SECRET — it can read and write the whole Paddle account.
  *   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY   if set, webhook events are journalled
  */
 
@@ -69,7 +72,7 @@ function methodNotAllowed(allowed) {
 
 function apiNotFound() {
   return errorResponse(
-    'Unknown API route. Available: GET /api/health, POST /api/chat, POST /api/agent, GET /api/paddle-config, POST /api/paddle/webhook.',
+    'Unknown API route. Available: GET /api/health, POST /api/chat, POST /api/agent, GET /api/paddle-config, GET /api/checkout-status, POST /api/paddle/webhook.',
     404,
     'ROUTE_NOT_FOUND'
   );
@@ -398,10 +401,11 @@ function handleHealth(env) {
       environment: paddleEnv || null,
       tokenMatchesEnv: paddleReady ? token.startsWith(paddleEnv === 'sandbox' ? 'test_' : 'live_') : false,
       webhookConfigured: Boolean(env.PADDLE_WEBHOOK_SECRET),
-      eventLogConfigured: Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY)
+      serverKeyConfigured: Boolean(env.PADDLE_API_KEY),
+      eventLogConfigured: Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY),
+      activation: !supabaseClient(env) ? 'log-only' : String(env.WEBHOOK_ACTIVATE || '') === '0' ? 'disabled' : 'on'
     },
     limits: { requestsPerMinute: num(env.RATE_LIMIT_PER_MINUTE, 20) || 'disabled' },
-    storage: { assets: 'static' }
   });
 }
 
@@ -434,6 +438,73 @@ function handlePaddleConfig(request, env) {
   if (!/^[A-Z]{2}$/.test(country) || country === 'XX' || country === 'T1') country = null; // unknown → let Paddle detect
 
   return json({ environment, clientToken: token, country });
+}
+
+/* ------------------------------------------------------------- Paddle API */
+
+/** Which Paddle environment a server-side (API key) call should hit. Never defaults to live. */
+export function paddleApiBase(env) {
+  const forced = String(env.PADDLE_API_BASE || '').trim().replace(/\/+$/, '');
+  if (forced) return forced; // test/proxy override, e.g. http://127.0.0.1:9124
+  return String(env.PADDLE_ENV || '').trim() === 'production' ? 'https://api.paddle.com' : 'https://sandbox-api.paddle.com';
+}
+
+async function paddleApi(env, path, init = {}) {
+  const key = String(env.PADDLE_API_KEY || '').trim();
+  if (!key) return { error: { code: 'PADDLE_API_NOT_CONFIGURED', message: 'PADDLE_API_KEY is not set, so Realm AI cannot ask Paddle about this purchase.' }, status: 503 };
+  const res = await fetch(`${paddleApiBase(env)}${path}`, {
+    ...init,
+    headers: { authorization: `Bearer ${key}`, accept: 'application/json', ...(init.body ? { 'content-type': 'application/json' } : {}), ...(init.headers || {}) }
+  });
+  const text = await res.text();
+  let data = {};
+  try { data = JSON.parse(text || '{}'); } catch { data = {}; }
+  return { status: res.status, ...data };
+}
+
+const maskEmail = (email) => {
+  const value = String(email || '');
+  const at = value.indexOf('@');
+  if (at < 1) return value ? '•'.repeat(Math.min(value.length, 8)) : null;
+  return `${value[0]}${'•'.repeat(Math.min(Math.max(at - 1, 1), 6))}@${value.slice(at + 1)}`;
+};
+
+/**
+ * GET /api/checkout-status?txn=txn_...
+ * The success page only gets a transaction id from Paddle (?_ptxn=...), so this turns it into a
+ * real confirmation without trusting anything the browser says. `plan` comes from the customData
+ * that pricing.js attaches at checkout, so no customer data is read or exposed.
+ */
+async function handleCheckoutStatus(request, env) {
+  const txn = String(new URL(request.url).searchParams.get('txn') || '');
+  if (!/^txn_[a-z\d]{26}$/.test(txn)) {
+    return json({ error: 'txn must be a Paddle transaction id (txn_...).', code: 'BAD_TRANSACTION_ID' }, 400);
+  }
+  const result = await paddleApi(env, `/transactions/${encodeURIComponent(txn)}`);
+  if (result.error) {
+    const upstream = Number(result.status) || 502;
+    if (upstream === 503) return json({ error: String(result.error.message || 'Paddle is not configured on this server.'), code: 'PADDLE_API_NOT_CONFIGURED' }, 503);
+    const message = upstream === 404
+      ? 'Paddle has no such transaction in this environment. If you paid in sandbox, PADDLE_ENV must be "sandbox".'
+      : String(result.error.message || 'Paddle refused the request.');
+    return json({ error: message, code: upstream === 404 ? 'TRANSACTION_NOT_FOUND' : 'PADDLE_API_ERROR' }, upstream === 404 ? 404 : 502, { 'cache-control': 'no-store' });
+  }
+  const t = result.data || {};
+  const totals = t.details?.totals || {};
+  return json({
+    transactionId: t.id || txn,
+    status: t.status || 'unknown',            // draft | ready | pending | paid | completed | canceled
+    paid: ['paid', 'completed'].includes(t.status),
+    plan: t.custom_data?.tier || null,
+    billing: t.custom_data?.billing || null,
+    items: (t.items || []).map((i) => ({ description: i.price?.description || i.price?.productId || null, quantity: i.quantity ?? 1 })),
+    total: totals.grand_total ?? t.subtotal ?? null,
+    currency: t.currency_code || null,
+    subscriptionId: t.subscription_id || null,
+    invoiceUrl: t.invoice?.url || null,
+    statusUrl: t.status_url || null,
+    updatedNote: t.updated_at || null
+  }, 200, { 'cache-control': 'no-store' });
 }
 
 /* --------------------------------------------------------- Paddle webhooks */
@@ -525,9 +596,26 @@ async function handlePaddleWebhook(request, env) {
   const event = verified.event;
   const stored = await logPaymentEvent(env, event);
 
+  // Then apply it (subscriptions / payments / profile plan) when Supabase is configured.
+  let applied = null;
+  try {
+    applied = await applyWebhookEvent(env, event);
+  } catch (error) {
+    // A database problem must not make Paddle retry a valid notification forever.
+    console.error('[realm-ai] webhook activation failed', String(error?.message || error));
+    applied = { mode: 'activate', actions: [`failed: ${String(error?.message || error).slice(0, 120)}`] };
+  }
+
   // Subscription activation needs user accounts (Supabase Auth), which is Sprint C in NEXT_STEPS.md.
   // Until then this endpoint only verifies + journals, so nothing is ever marked "paid" by mistake.
-  return json({ received: true, event_id: event.event_id || null, event_type: event.event_type || null, event_log: stored });
+  return json({
+    received: true,
+    event_id: event.event_id || null,
+    event_type: event.event_type || null,
+    event_log: stored,
+    activation: applied?.mode || 'skipped',
+    actions: applied?.actions || []
+  });
 }
 
 
@@ -688,6 +776,139 @@ async function runAgentPhase(request, env) {
   return json({ phase, verdict: 'complete', gaps: [], final: trim(text, AGENT_OUTPUT_CHARS * 3), fallback: true });
 }
 
+
+/* ------------------------------------------- Supabase: plan activation */
+
+function supabaseClient(env) {
+  const url = String(env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  const key = String(env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (!url || !key) return null;
+  return { url, key };
+}
+
+/** Paddle plan labels are human text ("Pro", "Realm AI starter (monthly)"); profiles.plan is a slug. */
+const planName = (value) => String(value || '').trim().toLowerCase().replace(/^realm ai /, '').replace(/\s*\((monthly|yearly|month|year)\)$/, '');
+
+const SUB_STATUS = {
+  active: 'active', trialing: 'trialing', past_due: 'past_due', canceled: 'canceled',
+  paused: 'paused', incomplete: 'incomplete', incomplete_expired: 'canceled'
+};
+
+async function sbFetch(env, path, init = {}) {
+  const sb = supabaseClient(env);
+  if (!sb) return { skipped: true };
+  try {
+    const res = await fetch(`${sb.url}${path}`, {
+      ...init,
+      headers: {
+        apikey: sb.key,
+        authorization: `Bearer ${sb.key}`,
+        'content-type': 'application/json',
+        prefer: 'return=minimal',
+        ...(init.headers || {})
+      }
+    });
+    return { ok: res.ok, status: res.status, text: (await res.text()).slice(0, 300) };
+  } catch (error) {
+    return { ok: false, status: 0, text: String(error?.message || error) };
+  }
+}
+
+/**
+ * Turns a verified Paddle event into rows the app can read: subscriptions, payments, and the
+ * plan column on profiles (matched by customer email, since a Paddle customer is the only
+ * identity that exists before Realm AI has its own accounts).
+ *
+ * Best-effort by design: a database hiccup must never make Paddle retry a valid notification
+ * forever, so failures are reported and the webhook still returns 200.
+ * Set WEBHOOK_ACTIVATE=0 to log events without touching any table.
+ */
+export async function applyWebhookEvent(env, event) {
+  const missingDb = !supabaseClient(env);
+  const disabled = String(env.WEBHOOK_ACTIVATE || '') === '0';
+  const summary = { mode: missingDb ? 'log-only' : disabled ? 'disabled' : 'activate', actions: [] };
+  if (missingDb || disabled) return summary;
+
+  const type = String(event?.event_type || '');
+  const data = event?.data || {};
+  const note = (label, res) => {
+    if (!res || res.skipped) return;
+    summary.actions.push(`${label}:${res.ok ? 'ok' : `failed ${res.status} ${res.text || ''}`.trim()}`);
+  };
+
+  // Customer email (only with a Paddle API key) — needed to find the profile row.
+  let email = data.customer_email || data.checkout?.customer?.email || null;
+  if (!email && data.customer_id && env.PADDLE_API_KEY) {
+    const customer = await paddleApi(env, `/customers/${encodeURIComponent(data.customer_id)}`);
+    email = customer?.data?.email || null;
+  }
+
+  if (type.startsWith('subscription.')) {
+    const price = data.items?.[0]?.price || data.price || {};
+    const status = SUB_STATUS[data.status] || String(data.status || 'unknown');
+    const row = {
+      provider: 'paddle',
+      provider_ref: data.id || null,
+      paddle_customer_id: data.customer_id || null,
+      email: email || null,
+      // lowercase to match profiles.plan ('free', 'starter', 'pro', …)
+      plan: planName(data.custom_data?.tier || price.description) || 'unknown',
+      status,
+      current_period_end: data.current_billing_period?.ends_at || null
+    };
+    if (row.provider_ref) {
+      note('subscription', await sbFetch(env, '/rest/v1/subscriptions', {
+        method: 'POST',
+        headers: { prefer: 'return=minimal,resolution=merge-duplicates,on_conflict=provider,provider_ref' },
+        body: JSON.stringify(row)
+      }));
+    }
+    if (email && ['active', 'trialing'].includes(status)) {
+      note('plan', await sbFetch(env, `/rest/v1/profiles?email=eq.${encodeURIComponent(email)}`, {
+        method: 'PATCH', body: JSON.stringify({ plan: row.plan })
+      }));
+    } else if (email && ['canceled', 'past_due'].includes(status)) {
+      note('plan', await sbFetch(env, `/rest/v1/profiles?email=eq.${encodeURIComponent(email)}`, {
+        method: 'PATCH', body: JSON.stringify({ plan: 'free' })
+      }));
+    }
+  }
+
+  if (type.startsWith('transaction.')) {
+    const totals = data.details?.totals || {};
+    const paid = ['paid', 'completed'].includes(data.status);
+    const row = {
+      provider: 'paddle',
+      provider_txn_id: data.id || null,
+      email: email || null,
+      amount: Number(totals.grand_total ?? data.subtotal ?? 0) || 0,
+      currency: data.currency_code || 'USD',
+      status: data.status || 'unknown',
+      paid_at: paid ? data.updated_at || new Date().toISOString() : null,
+      raw_event: event
+    };
+    if (row.provider_txn_id) {
+      note('payment', await sbFetch(env, '/rest/v1/payments', {
+        method: 'POST',
+        headers: { prefer: 'return=minimal,resolution=merge-duplicates,on_conflict=provider,provider_txn_id' },
+        body: JSON.stringify(row)
+      }));
+    }
+    if (paid && email && data.custom_data?.tier) {
+      note('plan', await sbFetch(env, `/rest/v1/profiles?email=eq.${encodeURIComponent(email)}`, {
+        method: 'PATCH', body: JSON.stringify({ plan: planName(data.custom_data.tier) })
+      }));
+    }
+  }
+
+  if (event?.event_id) {
+    await sbFetch(env, `/rest/v1/payment_events?event_id=eq.${encodeURIComponent(event.event_id)}`, {
+      method: 'PATCH', body: JSON.stringify({ processed_at: new Date().toISOString() })
+    });
+  }
+  return summary;
+}
+
 /* ---------------------------------------------------------------- dispatcher */
 
 /**
@@ -715,6 +936,8 @@ export async function handleApi(request, env) {
     response = request.method === 'POST' ? await runAgentPhase(request, env) : methodNotAllowed('POST');
   } else if (path === '/api/chat') {
     response = request.method === 'POST' ? await handleChat(request, env) : methodNotAllowed('POST');
+  } else if (path === '/api/checkout-status') {
+    response = request.method === 'GET' || request.method === 'HEAD' ? await handleCheckoutStatus(request, env) : methodNotAllowed('GET');
   } else if (path === '/api/paddle-config') {
     response = request.method === 'GET' || request.method === 'HEAD' ? handlePaddleConfig(request, env) : methodNotAllowed('GET');
   } else if (path === '/api/paddle/webhook') {
@@ -731,7 +954,9 @@ export async function handleApi(request, env) {
   return response;
 }
 
-export const ROUTES = ['/api/health', '/api/chat', '/api/agent', '/api/paddle-config', '/api/paddle/webhook'];
+export const ROUTES = [
+  '/api/health', '/api/chat', '/api/agent', '/api/paddle-config', '/api/checkout-status', '/api/paddle/webhook'
+];
 
 /** Everything the app reads from the platform. Wrappers use this list because some runtimes
  *  (Netlify v2 in particular) expose env through a getter API instead of a plain object. */

@@ -58,15 +58,17 @@ create table if not exists public.payments (
   user_id          uuid references auth.users(id) on delete set null,
   provider         text not null default 'paddle',
   provider_txn_id  text,
-  amount         numeric(12,2) not null default 0,
+  email            text,
+  amount           numeric(12,2) not null default 0,
   currency         text not null default 'USD',
   status           text not null,
   paid_at          timestamptz,
   raw_event        jsonb,
-  created_at       timestamptz not null default now()
+  created_at       timestamptz not null default now(),
+  unique (provider, provider_txn_id)
 );
 
--- Raw provider notifications, written by /api/paddle/webhook (service role only).
+-- One verified Paddle notification per row; the webhook marks processed_at when it is applied.
 create table if not exists public.payment_events (
   event_id     text primary key,
   event_type   text,
@@ -89,6 +91,8 @@ create index if not exists messages_conversation_idx on public.messages (convers
 create index if not exists conversations_user_idx    on public.conversations (user_id, updated_at desc);
 create index if not exists subscriptions_email_idx    on public.subscriptions (lower(email));
 create index if not exists payments_txn_idx           on public.payments (provider_txn_id);
+create index if not exists payments_email_idx         on public.payments (lower(email));
+create index if not exists profiles_email_idx         on public.profiles (lower(email));
 create index if not exists payment_events_unprocessed_idx on public.payment_events (received_at) where processed_at is null;
 
 -- --------------------------------------------------------------- triggers

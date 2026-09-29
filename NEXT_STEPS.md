@@ -1,8 +1,10 @@
 # Realm AI — next steps
 
-Status after the current cleanup: the site deploys cleanly on Cloudflare, `/api/chat` works with one
-secret, billing and payment webhooks are wired but disabled until you add Paddle credentials, and the
-database schema is ready to paste into Supabase. What's left is product work, in dependency order.
+Status after the current cleanup: the site deploys cleanly on **Netlify** (and on Cloudflare, identically),
+`/api/chat` and `/api/agent` work with one secret, billing is wired end to end but stays in preview mode until
+Paddle credentials and price ids arrive, webhooks now *activate* plans when Supabase is configured, and
+`npm run setup` reports exactly which of those steps is still open. What's left is product work, in
+dependency order.
 
 ## Done (so you don't redo it)
 
@@ -16,6 +18,16 @@ database schema is ready to paste into Supabase. What's left is product work, in
   cross-wires the Settings fields (display name used to overwrite the Gemini model input, which then made
   every direct-key test fail with a bogus model name), and Pricing renders preview plans when Paddle is unset.
 - Security headers (`public/_headers`), `robots.txt`, `sitemap.xml`, `404.html`, Supabase schema with RLS.
+- **Checkout confirmation**: `GET /api/checkout-status?txn=…` asks Paddle (never the browser) what happened to
+  a transaction, and `/welcome.html` polls it until the payment is `paid`/`canceled` — so the thank-you page
+  cannot be forged by editing the URL and never lies while a 3-D Secure step is still in flight.
+- **Webhook → plan activation**: `subscription.*` upserts `subscriptions` on `(provider, provider_ref)`,
+  `transaction.*` inserts `payments` idempotently, and `profiles.plan` follows the tier from `customData.tier`
+  (email resolved through the Paddle API). Cancel/past_due drop it back to `free`; DB failures are reported
+  without making Paddle retry a valid event; `WEBHOOK_ACTIVATE=0` switches it off.
+- `scripts/setup.mjs` (`npm run setup`, `setup:gemini`, `setup:paddle`): validates the Gemini key against
+  Google and picks a model it can actually use; creates the Paddle products + monthly/yearly prices and writes
+  the `pri_…` ids back into `public/tiers.js`; checks that sandbox/live credentials aren't mixed.
 - CI: `.github/workflows/ci.yml` runs `npm run check` (structure, leftover placeholders, secret scan,
   import resolution) + `npm test` + `wrangler deploy --dry-run`.
 
@@ -31,6 +43,8 @@ database schema is ready to paste into Supabase. What's left is product work, in
 Create a Supabase project, run `supabase/schema.sql` in its SQL editor, then in the frontend:
 - replace the login modal stub (`window.loginSoon`) with Supabase Auth (email magic link is the least code),
 - set `window.REALM_USER = { email, id }` after login — `pricing.js` already attaches that email to checkout,
+  and the webhook already writes `profiles.plan` by email, so **activation needs no new code**: the app only has
+  to *read* the plan (and pass the JWT to `/api/chat`) once accounts exist,
 - move chat history from `localStorage` into `conversations` / `messages` (RLS already scopes rows to `auth.uid()`).
 
 Secrets stay server-side: only the **anon** key may appear in the page. The service-role key belongs in
@@ -82,6 +96,10 @@ easier global option; don't run both for the same plan.
 - [ ] `npm run check` has zero warnings (domain + price IDs set)
 - [ ] Agent mode: run a 3-step goal end to end on the deployed URL and confirm Stop + retry-a-step work
 - [ ] Paddle **live** catalog, website approval, live webhook secret, `PADDLE_ENV=production`
+      (`PADDLE_API_KEY` too, or the welcome page can't confirm payments from the server)
+- [ ] One real sandbox checkout on the deployed URL: test card `4242 4242 4242 4242`, then confirm
+      `/welcome.html?_ptxn=…` shows "Payment confirmed" and the webhook in Paddle's dashboard shows `200`
+- [ ] `npm run setup` clean (no blocking findings) on the machine you deploy from
 - [ ] `RATE_LIMIT_KV` bound; abuse reviewed via `npx wrangler tail`
 - [ ] Mobile: upload limits, keyboard on chat input, voice fallback toast
 - [ ] Legal: replace the placeholder Privacy/Terms text in `index.html` (`const LEGAL = {...}`) with real text

@@ -130,12 +130,20 @@ answer. One deploy each, one shared codebase (`shared/api.js`), nothing to rewri
    ```html
    <meta name="realm:api" content="https://realm-ai.<account>.workers.dev" />
    ```
-   Everything (`/api/chat`, `/api/agent`, `/api/health`, `/api/paddle-config`) then goes to the Worker
+   Everything (`/api/chat`, `/api/agent`, `/api/health`, `/api/paddle-config`, `/api/checkout-status`)
+   then goes to the Worker
    while the HTML/JS stays on Netlify. `npm test` asserts the base is normalised and that the default is
    still same-origin, so leaving the tag empty keeps the simple setup.
 4. Point Paddle's webhook at `https://realm-ai.<account>.workers.dev/api/paddle/webhook` (the Worker, not
    Netlify — the function timeout doesn't matter there, but keep it to one place so events aren't
-   journalled twice).
+   journalled twice). Put `PADDLE_ENV`, `PADDLE_CLIENT_TOKEN`, `PADDLE_API_KEY` and `PADDLE_WEBHOOK_SECRET`
+   on the **Worker** too, because `/api/paddle-config` and `/api/checkout-status` are served from there;
+   `public/tiers.js` still ships from Netlify with the price ids.
+   ```bash
+   npx wrangler secret put PADDLE_WEBHOOK_SECRET
+   npx wrangler secret put PADDLE_API_KEY
+   printf 'sandbox' | npx wrangler secret put PADDLE_ENV
+   ```
 5. Verify:
    ```bash
    curl -sI -X OPTIONS https://realm-ai.<acct>.workers.dev/api/chat -H "Origin: https://reralm-ai.netlify.app" | grep -i access-control
@@ -151,7 +159,9 @@ answer. One deploy each, one shared codebase (`shared/api.js`), nothing to rewri
 | `GEMINI_MODEL_FALLBACK` | same | no retry when the model name is wrong → `502 MODEL_NOT_FOUND` |
 | `PADDLE_ENV`, `PADDLE_CLIENT_TOKEN` | `/api/paddle-config` | pricing page stays in preview mode (`503 PADDLE_NOT_CONFIGURED`) |
 | `PADDLE_WEBHOOK_SECRET` | `/api/paddle/webhook` | every Paddle notification is refused (`503 WEBHOOK_NOT_CONFIGURED`) |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | webhook event journal | events are verified + acked but not stored |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | webhook event journal + plan activation | events are verified + acked, `"activation":"log-only"` in `/api/health` |
+| `PADDLE_API_KEY` | `/api/checkout-status`, webhook customer lookup | checkout confirmation replies `503 PADDLE_API_NOT_CONFIGURED`; welcome.html falls back to its static thank-you |
+| `WEBHOOK_ACTIVATE=0` | webhook | events are verified and journalled without touching `subscriptions`/`payments`/`profiles` |
 | `RATE_LIMIT_PER_MINUTE` | `/api/chat` | defaults to 20/min per visitor IP |
 | `ALLOWED_ORIGINS` | all `/api/*` | cross-origin calls get no CORS headers (same-origin needs none) |
 

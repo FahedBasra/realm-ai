@@ -15,10 +15,14 @@
     "deploy:pages": "wrangler pages deploy public",
     "secret:ai": "wrangler secret put GEMINI_API_KEY",
     "dry-run": "wrangler deploy --dry-run",
-    "test": "node scripts/check.mjs && node tests/realm-api.test.mjs && node tests/ui-smoke.test.mjs",
+    "test": "node scripts/check.mjs && node tests/realm-api.test.mjs && node tests/setup.test.mjs && node tests/ui-smoke.test.mjs",
     "test:ui": "node tests/ui-smoke.test.mjs",
     "mock:ai": "node scripts/mock-gemini.mjs",
-    "dev:mock": "node scripts/dev-mock.mjs"
+    "dev:mock": "node scripts/dev-mock.mjs",
+    "setup": "node scripts/setup.mjs doctor",
+    "setup:gemini": "node scripts/setup.mjs gemini",
+    "setup:paddle": "node scripts/setup.mjs paddle",
+    "mock:webhook": "node scripts/mock-webhook.mjs"
   },
   "repository": {
     "type": "git",

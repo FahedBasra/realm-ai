@@ -46,6 +46,8 @@ const required = [
   'functions/api/chat.js',
   'functions/api/health.js',
   'functions/api/paddle-config.js',
+  'functions/api/checkout-status.js',
+  'functions/api/agent.js',
   'functions/api/paddle/webhook.js',
   'supabase/schema.sql'
 ];
