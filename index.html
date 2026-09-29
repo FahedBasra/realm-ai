@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="description" content="Realm AI — a modern AI workspace for chat, agents, files, coding, images and knowledge." />
+<meta name="keywords" content="Realm AI, AI assistant, AI chatbot, AI agent, Pakistan" />
+<link rel="canonical" href="https://YOUR-DOMAIN/" />
+<meta property="og:title" content="Realm AI — AI Workspace" />
+<meta property="og:description" content="Chat, agents, files, coding and images in one AI workspace." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://YOUR-DOMAIN/" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23101b35'/%3E%3Cpath d='M9 24V8h8c4 0 6 2 6 5s-2 5-5 5l5 6h-5l-4-5h-1v5z' fill='%2336b7ff'/%3E%3C/svg%3E" />
+<meta name="theme-color" content="#070b14" />
+<script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+<title>Realm AI — AI Workspace</title>
+<style>
+:root{
+  --bg:#050812;--bg2:#080d18;--panel:rgba(12,18,33,.88);--panel2:rgba(16,24,43,.9);--line:#1f2c45;
+  --text:#f5f7ff;--muted:#91a0bb;--muted2:#65738d;--blue:#2aa9ff;--purple:#8b5cf6;--cyan:#36e7d4;
+  --pink:#ea4cff;--shadow:0 22px 70px rgba(0,0,0,.42);--radius:18px
+}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;color:var(--text);background:
+radial-gradient(circle at 70% 0%,rgba(68,76,255,.16),transparent 28%),
+radial-gradient(circle at 15% 18%,rgba(27,193,255,.08),transparent 23%),
+linear-gradient(180deg,#050812,#070b15 55%,#050812);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!important}
+.app{min-height:100vh;display:grid;grid-template-columns:258px 1fr}.sidebar{position:sticky;top:0;height:100vh;padding:18px 14px;border-right:1px solid var(--line);background:rgba(6,10,18,.82);backdrop-filter:blur(22px);z-index:15;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:11px;padding:4px 9px 18px}.logo{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#101b35,#17102c);box-shadow:0 0 30px rgba(86,95,255,.25);border:1px solid #2a3a60}.brand-text{font-size:19px;font-weight:850;letter-spacing:-.03em}.brand-text span{background:linear-gradient(90deg,#36b7ff,#a46dff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.newchat{width:100%;display:flex;align-items:center;gap:10px;padding:12px 13px;border:1px solid #2d3d60;background:linear-gradient(135deg,#17223b,#0e1628);color:#fff;border-radius:13px;font-weight:700;box-shadow:0 14px 40px rgba(20,50,110,.16)}.newchat:hover{border-color:#5877b9;transform:translateY(-1px)}
+.section-label{font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:#60708e;padding:20px 11px 8px}.nav{display:grid;gap:4px}.nav button{border:0;background:transparent;color:#8e9ab3;border-radius:11px;padding:10px 11px;text-align:left;display:flex;align-items:center;gap:11px}.nav button:hover,.nav button.active{background:linear-gradient(90deg,rgba(45,105,220,.18),rgba(74,47,160,.10));color:#fff}.nav .badge{margin-left:auto;font-size:10px;padding:3px 6px;border-radius:999px;background:#211940;color:#d8bcff;border:1px solid #4b317a}
+.side-spacer{flex:1}.upgrade{padding:13px;border-radius:15px;border:1px solid #2f3961;background:linear-gradient(145deg,rgba(67,45,132,.35),rgba(13,18,34,.65));margin:10px 1px}.upgrade strong{display:block;font-size:13px}.upgrade p{margin:4px 0 10px;color:#8996af;font-size:11px;line-height:1.45}.upgrade button{width:100%;border:0;border-radius:9px;padding:9px;background:linear-gradient(90deg,#743bff,#ae43ff);color:#fff;font-size:12px;font-weight:800}.profile{display:flex;align-items:center;gap:9px;padding:10px 8px;margin-top:7px;border-top:1px solid var(--line)}.avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;background:linear-gradient(135deg,#20335d,#40215e);border:1px solid #43567e}.profile-name{font-size:12px;font-weight:750}.profile-plan{font-size:10px;color:#73819b;margin-top:2px}.profile-more{margin-left:auto;color:#7785a2}
+.main{min-width:0}.topbar{height:64px;position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:0 23px;border-bottom:1px solid var(--line);background:rgba(5,8,18,.72);backdrop-filter:blur(20px)}.crumb{display:flex;align-items:center;gap:9px;color:#a2aec4;font-size:13px}.crumb b{color:#fff}.search{width:min(340px,38vw);display:flex;gap:8px;align-items:center;padding:8px 11px;border:1px solid var(--line);background:#0b1220;border-radius:11px;color:#667691}.search input{border:0;outline:0;background:transparent;color:#eaf0ff;min-width:0;width:100%;font-size:12px}.top-actions{display:flex;align-items:center;gap:7px}.iconbtn{width:36px;height:36px;border:1px solid var(--line);background:#0c1321;color:#9aa7bd;border-radius:10px}.iconbtn:hover{border-color:#3b537e;color:#fff}.top-cta{border:0;padding:9px 12px;border-radius:10px;color:#fff;font-size:12px;font-weight:800;background:linear-gradient(90deg,#2877ff,#9b50ff)}
+.view{display:none}.view.show{display:block}.page{max-width:1400px;margin:auto;padding:32px 30px 60px}.eyebrow{display:inline-flex;align-items:center;gap:8px;border:1px solid #293b63;background:rgba(16,26,48,.62);padding:7px 10px;border-radius:999px;color:#aec4ea;font-size:11px}.eyebrow i{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 11px var(--cyan)}
+.hero{display:grid;grid-template-columns:1.03fr .97fr;gap:38px;align-items:center;padding:45px 4px 34px}.hero h1{font-size:clamp(43px,5.5vw,78px);line-height:.96;letter-spacing:-.055em;margin:17px 0 18px;max-width:730px}.gradient{background:linear-gradient(92deg,#36bcff 4%,#4d78ff 42%,#d65cff 86%);-webkit-background-clip:text;background-clip:text;color:transparent}.hero p{color:#9da9bf;font-size:17px;line-height:1.65;max-width:630px}.hero-actions{display:flex;flex-wrap:wrap;gap:11px;margin-top:25px}.primary,.secondary{border-radius:12px;padding:12px 16px;font-weight:800}.primary{border:0;color:#fff;background:linear-gradient(95deg,#1f8fff,#8d4cff);box-shadow:0 14px 40px rgba(82,65,240,.24)}.secondary{border:1px solid #33486e;color:#dbe5ff;background:#0c1321}.primary:hover,.secondary:hover{transform:translateY(-1px)}.hero-note{display:flex;gap:12px;align-items:center;color:#6f7d98;font-size:11px;margin-top:16px}.tiny-avatars{display:flex}.tiny-avatars span{width:24px;height:24px;border-radius:50%;border:2px solid #070b15;margin-left:-7px;background:linear-gradient(135deg,#2a4c89,#7b3e83)}.tiny-avatars span:first-child{margin-left:0}
+.product-frame{position:relative;min-height:400px;padding:16px;border:1px solid #24395d;border-radius:24px;background:linear-gradient(145deg,rgba(14,24,45,.97),rgba(9,13,27,.96));box-shadow:var(--shadow);overflow:hidden}.product-frame:before{content:"";position:absolute;inset:-100px auto auto 50px;width:430px;height:250px;background:radial-gradient(circle,rgba(43,161,255,.25),transparent 68%);filter:blur(18px)}.mock-top{height:35px;display:flex;align-items:center;gap:6px;padding:0 3px}.window-dot{width:7px;height:7px;border-radius:50%;background:#31405e}.mock-search{margin-left:auto;width:180px;height:23px;border-radius:7px;background:#101a2d;border:1px solid #233351}.mock-body{position:relative;z-index:1;display:grid;grid-template-columns:165px 1fr 180px;gap:12px;height:320px}.mock-side,.mock-main,.mock-agent{border:1px solid #20304d;background:#0a1120;border-radius:14px}.mock-side{padding:11px}.mock-brand{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:800;margin-bottom:12px}.mock-item{height:24px;margin:4px 0;border-radius:7px;color:#74839d;font-size:9px;display:flex;align-items:center;padding:0 7px}.mock-item.on{background:#18306a;color:#fff}.mock-main{padding:16px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}.mock-main h3{font-size:23px;margin:12px 0 7px}.mock-main p{font-size:9px;color:#7788a4;max-width:260px;line-height:1.5}.quick{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:12px}.quick span{border:1px solid #263958;background:#0d1729;border-radius:8px;padding:6px 7px;color:#9baaca;font-size:8px}.mock-input{width:100%;height:43px;border:1px solid #2b4267;background:#0b1425;border-radius:10px;margin-top:18px;display:flex;align-items:center;padding:0 10px;color:#586983;font-size:9px}.mock-send{margin-left:auto;width:23px;height:23px;border-radius:7px;background:linear-gradient(135deg,#2b93ff,#8c4ef5);display:grid;place-items:center;color:#fff}.mock-agent{padding:12px}.mock-agent-title{font-size:11px;font-weight:800;margin-bottom:8px}.agent-card{border:1px solid #273959;padding:8px;border-radius:9px;margin:6px 0;background:#0d1728}.agent-card b{display:block;font-size:9px}.agent-card span{font-size:7px;color:#71819e}.hero-float{position:absolute;right:5px;bottom:13px;padding:9px 11px;border:1px solid #2b4f77;background:#0a1828;border-radius:11px;font-size:9px;color:#9ed9ff;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.feature-strip{display:grid;grid-template-columns:repeat(8,1fr);border:1px solid var(--line);border-radius:17px;overflow:hidden;background:rgba(9,14,25,.76);box-shadow:var(--shadow)}.feature{padding:17px 9px 16px;text-align:center;border-right:1px solid #18253b}.feature:last-child{border-right:0}.feature-icon{width:34px;height:34px;margin:0 auto 7px;display:grid;place-items:center;border-radius:10px;background:linear-gradient(145deg,#112640,#1d1a43);border:1px solid #2b3c63;color:#70c6ff}.feature b{display:block;font-size:10px}.feature span{display:block;margin-top:3px;color:#66758f;font-size:8px;line-height:1.35}
+.section{padding:62px 0 0}.section-head{display:flex;justify-content:space-between;gap:18px;align-items:end;margin-bottom:17px}.section-head h2{font-size:28px;letter-spacing:-.03em;margin:0}.section-head p{margin:6px 0 0;color:#73819b;font-size:13px}.section-link{background:transparent;border:0;color:#8cbcff;font-size:12px}.dashboard{display:grid;grid-template-columns:1.4fr .9fr;gap:16px}.card{border:1px solid var(--line);background:linear-gradient(160deg,rgba(15,23,40,.92),rgba(8,13,24,.92));border-radius:18px;box-shadow:0 14px 44px rgba(0,0,0,.2)}.dash-main{padding:18px}.welcome{display:flex;justify-content:space-between;gap:18px;align-items:center;border:1px solid #263b62;border-radius:14px;padding:18px;background:radial-gradient(circle at 78% 50%,rgba(71,101,255,.18),transparent 36%),linear-gradient(120deg,#101a31,#0d1425)}.welcome h3{font-size:21px;margin:0 0 6px}.welcome p{font-size:11px;color:#71819c;margin:0}.pro-pill{font-size:9px;padding:5px 8px;border-radius:999px;background:#26134a;border:1px solid #623e9a;color:#d3b9ff}.quick-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0 17px}.qa{padding:11px;border:1px solid #233550;border-radius:11px;background:#0b1323;color:#b7c2d9;text-align:left}.qa:hover{border-color:#43679b;background:#0e182b}.qa b{display:block;font-size:10px;color:#fff;margin-bottom:3px}.qa span{display:block;font-size:8px;color:#667590}.rows{border-top:1px solid #1c2940}.rowitem{display:flex;align-items:center;gap:10px;padding:12px 2px;border-bottom:1px solid #151f33}.rowicon{width:28px;height:28px;border-radius:8px;background:#10203c;display:grid;place-items:center;color:#6ec4ff}.rowitem b{font-size:10px}.rowitem span{display:block;font-size:8px;color:#687791;margin-top:2px}.rowtime{margin-left:auto;color:#56637b;font-size:8px}.quick-tools{padding:18px}.tool{display:flex;align-items:center;gap:9px;padding:10px 0;border-bottom:1px solid #1a263b}.tool:last-child{border-bottom:0}.tool-ico{width:28px;height:28px;border-radius:8px;background:#101b30;border:1px solid #22324f;display:grid;place-items:center;color:#b78dff}.tool b{font-size:10px}.tool span{display:block;font-size:8px;color:#667590;margin-top:2px}.arrow{margin-left:auto;color:#53637d}
+.bento{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}.bento .card{padding:20px;min-height:180px}.b1{grid-column:span 5}.b2{grid-column:span 4}.b3{grid-column:span 3}.b4{grid-column:span 7}.b5{grid-column:span 5}.btitle{display:flex;align-items:center;gap:9px}.btitle .feature-icon{margin:0;width:37px;height:37px;flex:0 0 37px}.bento h3{margin:0;font-size:14px}.bento p{color:#70809b;font-size:11px;line-height:1.55;margin:12px 0 0}.mini-ui{margin-top:16px;display:grid;gap:6px}.mini-line{height:8px;border-radius:5px;background:linear-gradient(90deg,#273b60 0%,#273b60 66%,#13223a 66%)}.mini-line:nth-child(2){width:82%}.mini-line:nth-child(3){width:58%}.dropzone{margin-top:15px;border:1px dashed #355886;border-radius:12px;padding:15px;text-align:center;background:rgba(31,91,160,.06);color:#82a6d6;font-size:10px}.dropzone strong{display:block;color:#fff;font-size:11px;margin-bottom:3px}.codebox{margin-top:14px;padding:12px;background:#070c16;border:1px solid #1c2940;border-radius:10px;font:10px ui-monospace,SFMono-Regular,Menlo,monospace;color:#8bb6ff;line-height:1.55}.glowline{height:1px;margin-top:14px;background:linear-gradient(90deg,transparent,#3e6fff,transparent)}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.metric{padding:17px 18px}.metric .value{font-size:24px;font-weight:850;letter-spacing:-.04em}.metric .label{font-size:10px;color:#687894;margin-top:3px}.metric .delta{font-size:9px;color:#67d6c2;margin-top:9px}
+.page-title{padding:28px 2px 22px}.page-title h1{font-size:34px;margin:0 0 7px;letter-spacing:-.03em}.page-title p{margin:0;color:#75839e;font-size:13px}.workspace{display:grid;grid-template-columns:1fr 320px;gap:15px}.workspace-main,.workspace-side{padding:18px}.textarea{width:100%;min-height:280px;background:#09111f;border:1px solid #233653;border-radius:14px;color:#eef3ff;padding:15px;resize:vertical;outline:0}.textarea:focus,.input:focus{border-color:#4c78b6;box-shadow:0 0 0 3px rgba(40,128,255,.1)}.toolbar{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.toolbtn{padding:8px 10px;border:1px solid var(--line);background:#0c1423;color:#93a2bc;border-radius:9px;font-size:10px}.toolbtn:hover{color:#fff;border-color:#3f5a85}.side-card-title{font-size:11px;font-weight:800;margin-bottom:11px}.check{display:flex;gap:8px;align-items:center;padding:8px 0;color:#8493ac;font-size:10px}.check i{width:6px;height:6px;border-radius:50%;background:#4acfbf}
+.chat-layout{height:calc(100vh - 64px);display:grid;grid-template-columns:235px minmax(0,1fr) 260px}.chat-list{border-right:1px solid var(--line);padding:15px;overflow:auto;background:rgba(7,11,19,.55)}.chat-list h4{margin:0 0 10px;color:#74829a;font-size:10px;text-transform:uppercase;letter-spacing:.12em}.chat-title{padding:10px;border-radius:10px;color:#8c9ab3;font-size:10px;margin:3px 0}.chat-title.active,.chat-title:hover{background:#111b2f;color:#fff}.chat-main{min-width:0;display:flex;flex-direction:column}.chat-hero{text-align:center;padding:45px 18px 22px}.chat-hero h2{font-size:35px;margin:0 0 8px;letter-spacing:-.04em}.chat-hero p{color:#7988a2;font-size:12px}.messages{flex:1;overflow:auto;padding:10px 22px 18px}.msg{display:flex;gap:10px;max-width:880px;margin:14px auto}.msg.me{justify-content:flex-end}.bubble{max-width:76%;padding:11px 13px;border:1px solid #22324f;background:#0c1526;border-radius:13px;font-size:12px;line-height:1.6}.msg.me .bubble{background:linear-gradient(135deg,#172b54,#20153c);border-color:#314b79}.composer-wrap{padding:12px 20px 15px;border-top:1px solid var(--line);background:rgba(7,11,19,.82)}.composer{max-width:900px;margin:auto;border:1px solid #324768;border-radius:16px;background:#0a1220;box-shadow:0 16px 45px rgba(0,0,0,.23)}.composer-top{display:flex;gap:6px;padding:8px 9px 0}.attach{width:31px;height:31px;border:1px solid #22344f;border-radius:9px;background:#0d1728;color:#9aa9c1}.attach:hover{color:#fff;border-color:#41638f}.composer textarea{width:100%;min-height:48px;border:0;outline:0;background:transparent;color:#fff;padding:10px 12px;resize:none}.composer-bottom{display:flex;align-items:center;gap:7px;padding:0 9px 9px}.mode{font-size:9px;color:#7786a0;padding:5px 7px;border-radius:7px;background:#101a2e}.send{margin-left:auto;border:0;width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#299bff,#8c50f5);color:#fff;font-weight:900}.disclaimer{text-align:center;color:#515f78;font-size:8px;margin-top:7px}.chat-tools{border-left:1px solid var(--line);padding:17px;background:rgba(7,11,19,.55)}.chat-tools .card{padding:15px;margin-bottom:10px}.tool-row{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #1a273d}.tool-row:last-child{border-bottom:0}.tool-row .sq{width:26px;height:26px;border-radius:8px;background:#101c32;display:grid;place-items:center;color:#7ecbff}.tool-row b{font-size:9px}.tool-row span{display:block;font-size:8px;color:#65748f;margin-top:2px}
+.drop-upload{position:fixed;inset:0;display:none;place-items:center;background:rgba(3,7,14,.74);backdrop-filter:blur(8px);z-index:50}.drop-upload.show{display:grid}.uploadbox{width:min(540px,92vw);padding:26px;border-radius:22px;border:1px dashed #4b6fa8;background:#0b1323;text-align:center;box-shadow:var(--shadow)}.uploadbox h3{margin:10px 0 6px}.uploadbox p{color:#75839a;font-size:12px}.big-upload{border:1px dashed #355c8d;border-radius:15px;padding:28px;margin:18px 0;color:#8bb5e6;background:rgba(40,104,177,.06)}.file-pill{display:inline-flex;align-items:center;gap:6px;margin:4px;padding:6px 9px;background:#0f1a2d;border:1px solid #233b5e;border-radius:999px;font-size:9px;color:#9cb1cf}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.68);backdrop-filter:blur(7px);display:none;place-items:center;padding:20px;z-index:60}.modal.show{display:grid}.modalbox{width:min(470px,100%);background:#0b1220;border:1px solid #2b3d5d;border-radius:20px;padding:22px;box-shadow:var(--shadow)}.modalhead{display:flex;justify-content:space-between;align-items:center}.modalhead h3{margin:0}.close{border:0;background:transparent;color:#8c9bb4;font-size:22px}.stack{display:grid;gap:9px;margin-top:15px}.input{width:100%;border:1px solid #243651;background:#09111f;color:#fff;padding:11px 12px;border-radius:10px;outline:0}.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.plan{padding:19px;position:relative}.plan h3{margin:0 0 5px}.plan .price{font-size:30px;font-weight:900;margin:13px 0}.plan .per{color:#687793;font-size:11px}.plan ul{list-style:none;padding:0;margin:16px 0}.plan li{color:#7d8ca7;font-size:10px;padding:5px 0}.plan li:before{content:'✓';margin-right:7px;color:#65d7c5}.plan.pro{border-color:#6045ad;box-shadow:0 18px 65px rgba(80,50,190,.14)}.popular{position:absolute;right:14px;top:14px;font-size:8px;padding:4px 6px;border-radius:999px;background:#29164a;color:#d0b5ff;border:1px solid #614093}.notice{padding:11px;border-radius:11px;background:#0b1626;border:1px solid #233a58;color:#71829c;font-size:9px;line-height:1.55}
+.mobile-menu{display:none}.footer{padding:45px 0 0;border-top:1px solid #17243a;margin-top:60px;display:flex;justify-content:space-between;color:#62718d;font-size:10px}.footer-links{display:flex;gap:16px}.footer-links button{border:0;background:transparent;color:#74839a;font-size:10px}
+@media(max-width:1100px){.feature-strip{grid-template-columns:repeat(4,1fr)}.feature:nth-child(4){border-right:0}.feature:nth-child(n+5){border-top:1px solid #18253b}.dashboard{grid-template-columns:1fr}.b3{grid-column:span 6}.b4{grid-column:span 6}.b5{grid-column:span 12}.chat-layout{grid-template-columns:200px minmax(0,1fr)}.chat-tools{display:none}}
+@media(max-width:850px){.app{grid-template-columns:1fr}.sidebar{display:none}.mobile-menu{display:inline-grid}.topbar{padding:0 13px}.search{width:36px;padding:8px}.search input{display:none}.hero{grid-template-columns:1fr;padding-top:34px}.product-frame{min-height:340px}.mock-body{grid-template-columns:120px 1fr}.mock-agent{display:none}.quick-actions{grid-template-columns:repeat(2,1fr)}.bento{grid-template-columns:1fr}.b1,.b2,.b3,.b4,.b5{grid-column:span 1}.plans{grid-template-columns:1fr}.workspace{grid-template-columns:1fr}.page{padding:25px 16px 50px}.chat-layout{grid-template-columns:1fr}.chat-list{display:none}.chat-hero{padding-top:35px}.feature-strip{grid-template-columns:repeat(2,1fr)}}
+
+.bubble{font-size:14px;line-height:1.7}.bubble h4{margin:10px 0 4px;font-size:14px}.bubble ul,.bubble ol{margin:6px 0;padding-left:20px}.bubble code{background:#111c31;padding:1px 5px;border-radius:5px;font:12px ui-monospace,Menlo,monospace;color:#9fd0ff}.bubble pre{position:relative;background:#070c16;border:1px solid #1c2940;border-radius:10px;padding:26px 12px 12px;margin:10px 0;overflow-x:auto}.bubble pre code{background:none;padding:0;color:#cfe3ff;white-space:pre}.bubble pre .lang{position:absolute;left:12px;top:6px;font-size:10px;color:#65738d}.copycode{position:absolute;right:8px;top:5px;border:0;border-radius:6px;background:#15223a;color:#9fb0cc;font-size:10px;padding:3px 8px}
+.acts{display:flex;gap:6px;margin-top:8px}.acts button{border:1px solid #22324f;background:transparent;color:#7f8ea9;border-radius:8px;padding:3px 9px;font-size:11px}.acts button:hover{color:#fff;border-color:#41638f}
+.typing{display:inline-flex;gap:4px;align-items:center;vertical-align:middle}.typing i{width:6px;height:6px;border-radius:50%;background:#5aa9ff;animation:bl 1s infinite}.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}@keyframes bl{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.answer{margin:14px 0;font-size:14px;line-height:1.7;color:#dbe5ff}.answer:empty{display:none}.answer img{max-width:100%;border-radius:14px;border:1px solid #24395d}.answer pre{background:#070c16;border:1px solid #1c2940;border-radius:10px;padding:26px 12px 12px;overflow-x:auto;position:relative}.answer .dl{display:block;margin-top:8px;color:#8cbcff;font-size:12px}.answer .lang{position:absolute;left:12px;top:6px;font-size:10px;color:#65738d}.answer .copycode{position:absolute;right:8px;top:5px;border:0;border-radius:6px;background:#15223a;color:#9fb0cc;font-size:10px;padding:3px 8px}
+.chat-title{display:flex;justify-content:space-between;gap:6px;cursor:pointer;font-size:12px}.chat-title span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.chat-title .del{opacity:0;font-size:10px}.chat-title:hover .del{opacity:.7}.composer textarea{font-size:14px}.send:disabled{opacity:.5}
+#toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);background:#14213b;border:1px solid #2f4770;color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:99}#toast.show{opacity:1;transform:translate(-50%,0)}
+.feature,.tool,.tool-row{background:transparent;border:0;color:var(--text);font:inherit;width:100%;text-align:left}.feature{text-align:center;border-right:1px solid #18253b;width:auto}.feature:last-child{border-right:0}.tool,.tool-row{cursor:pointer}.tool-row b,.tool b{color:#e9efff}
+.msg:not(.me) .bubble{max-width:min(760px,90%)}@media(max-width:850px){.crumb>span{display:none}.top-cta{padding:8px 10px}.top-actions .iconbtn{display:none}}
+.plans{grid-template-columns:repeat(4,1fr)}@media(max-width:1100px){.plans{grid-template-columns:repeat(2,1fr)}}@media(max-width:850px){.plans{grid-template-columns:1fr}}
+@media(max-width:850px){.sidebar.open{display:flex;position:fixed;left:0;top:0;bottom:0;width:282px;z-index:60;background:#070b14;box-shadow:0 0 0 100vmax rgba(0,0,0,.65);overflow-y:auto}}.toolbtn.on{background:#14213b;border-color:#41638f;color:#fff}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand">
+    <div class="logo" aria-label="Realm AI logo"><svg width="25" height="25" viewBox="0 0 32 32" fill="none"><path d="M7 25V7h10.8c4.8 0 7.8 2.4 7.8 6.1 0 2.7-1.7 4.8-4.7 5.7L27 25h-6.2l-5.2-5.7H12V25H7Zm5-10.3h5.1c2.4 0 3.8-.9 3.8-2.5 0-1.7-1.4-2.5-3.8-2.5H12v5Z" fill="url(#g)"/><path d="M7 7h5v18H7z" fill="#56B7FF" opacity=".8"/><defs><linearGradient id="g" x1="7" y1="7" x2="27" y2="25" gradientUnits="userSpaceOnUse"><stop stop-color="#31B8FF"/><stop offset="1" stop-color="#C04DFF"/></linearGradient></defs></svg></div>
+    <div class="brand-text">Realm <span>AI</span></div>
+  </div>
+  <button class="newchat" id="newChat">＋ <span>New chat</span></button>
+  <div class="section-label">Workspace</div>
+  <nav class="nav">
+    <button class="active" data-view="home">⌂ <span>Home</span></button>
+    <button data-view="chat">◉ <span>Chat</span></button>
+    <button data-view="agent">✦ <span>AI Agent</span><span class="badge">PRO</span></button>
+    <button data-view="files">▤ <span>Files</span></button>
+    <button data-view="image">▧ <span>Image Generator</span></button>
+    <button data-view="code">&lt;/&gt; <span>Code Assistant</span></button>
+    <button data-view="knowledge">◈ <span>Knowledge Base</span></button>
+    <button data-view="history">◷ <span>History</span></button>
+  </nav>
+  <div class="section-label">Account</div>
+  <nav class="nav">
+    <button data-view="pricing">◇ <span>Plans & Billing</span></button>
+    <button data-view="settings">⚙ <span>Settings</span></button>
+  </nav>
+  <div class="side-spacer"></div>
+  <div class="upgrade"><strong>Unlock Realm Pro</strong><p>More AI usage, files, agents and advanced tools.</p><button id="upgradeBtn">Upgrade now →</button></div>
+  <div class="profile"><div class="avatar">G</div><div><div class="profile-name">Guest</div><div class="profile-plan">Free plan</div></div><div class="profile-more">⋯</div></div>
+</aside>
+<main class="main">
+<header class="topbar">
+  <div class="crumb"><button class="iconbtn mobile-menu" id="mobileNav">☰</button><span>Realm AI</span><span>›</span><b id="crumbName">Home</b></div>
+  <label class="search">⌕ <input id="globalSearch" placeholder="Search anything..." /></label>
+  <div class="top-actions"><button class="iconbtn" title="Plans" onclick="showView('pricing')">♢</button><button class="top-cta" id="headerUpgrade">Get Pro</button><button class="avatar" id="loginBtn">G</button></div>
+</header>
+
+<section class="view show" id="homeView">
+<div class="page">
+  <div class="hero">
+    <div>
+      <div class="eyebrow"><i></i> Next-generation AI workspace</div>
+      <h1>Your personal <span class="gradient">AI Assistant</span></h1>
+      <p>Chat, create, analyze, code and automate — all in one polished workspace built for everyday work, study and ideas.</p>
+      <div class="hero-actions"><button class="primary" onclick="showView('chat')">Start free today →</button><button class="secondary" onclick="showView('agent')">Explore AI Agent</button></div>
+      <div class="hero-note"><div class="tiny-avatars"><span></span><span></span><span></span><span></span></div> Built to grow from a simple chat into a powerful AI workspace.</div>
+    </div>
+    <div class="product-frame">
+      <div class="mock-top"><span class="window-dot"></span><span class="window-dot"></span><span class="window-dot"></span><div class="mock-search"></div></div>
+      <div class="mock-body">
+        <div class="mock-side"><div class="mock-brand">◈ Realm AI</div><div class="mock-item on">⌂ Home</div><div class="mock-item">◉ Chat</div><div class="mock-item">✦ AI Agent</div><div class="mock-item">▤ Files</div><div class="mock-item">▧ Image Generator</div><div class="mock-item">&lt;/&gt; Code</div><div class="mock-item">◈ Knowledge</div><div class="mock-item">◷ History</div></div>
+        <div class="mock-main"><div class="logo" style="width:42px;height:42px"><svg width="27" height="27" viewBox="0 0 32 32" fill="none"><path d="M7 25V7h10.8c4.8 0 7.8 2.4 7.8 6.1 0 2.7-1.7 4.8-4.7 5.7L27 25h-6.2l-5.2-5.7H12V25H7Zm5-10.3h5.1c2.4 0 3.8-.9 3.8-2.5 0-1.7-1.4-2.5-3.8-2.5H12v5Z" fill="url(#m)"/><defs><linearGradient id="m" x1="7" y1="7" x2="27" y2="25"><stop stop-color="#31B8FF"/><stop offset="1" stop-color="#C04DFF"/></linearGradient></defs></svg></div><h3>Hello, I’m Realm AI</h3><p>Your intelligent assistant for ideas, documents, coding, research and multi-step tasks.</p><div class="quick"><span>Summarize a document</span><span>Write an email</span><span>Create an image</span><span>Help with coding</span></div><div class="mock-input">Type your message... <div class="mock-send">↑</div></div></div>
+        <div class="mock-agent"><div class="mock-agent-title">AI Agent <small style="color:#6d7d98">• ready</small></div><div class="agent-card"><b>Research & Write</b><span>Gather and organize information</span></div><div class="agent-card"><b>Plan & Organize</b><span>Create tasks and schedules</span></div><div class="agent-card"><b>Analyze & Summarize</b><span>Turn long content into key points</span></div><div class="agent-card"><b>Build & Create</b><span>Generate useful outputs</span></div></div>
+      </div>
+      <div class="hero-float">✦ Powered by advanced AI models</div>
+    </div>
+  </div>
+  <div class="feature-strip">
+    <button class="feature" onclick="showView('chat')"><div class="feature-icon">◉</div><b>Chat Assistant</b><span>Smart & helpful answers</span></button>
+    <button class="feature" onclick="showView('agent')"><div class="feature-icon">✦</div><b>AI Agent</b><span>Automate complex tasks</span></button>
+    <button class="feature" onclick="showView('files')"><div class="feature-icon">▤</div><b>File Upload</b><span>PDF, DOCX, images & more</span></button>
+    <button class="feature" onclick="showView('image')"><div class="feature-icon">▧</div><b>Image Generator</b><span>Turn ideas into visuals</span></button>
+    <button class="feature" onclick="showView('code')"><div class="feature-icon">&lt;/&gt;</div><b>Code Assistant</b><span>Build & debug faster</span></button>
+    <button class="feature" onclick="startVoice()"><div class="feature-icon">♩</div><b>Voice & Speech</b><span>Talk naturally</span></button>
+    <button class="feature" onclick="toast('Realm AI replies in the language you write in.')"><div class="feature-icon">文</div><b>Multi-language</b><span>Global communication</span></button>
+    <button class="feature" onclick="showView('settings')"><div class="feature-icon">◇</div><b>Custom AI</b><span>Your own assistant</span></button>
+  </div>
+  <div class="section">
+    <div class="section-head"><div><h2>Command center</h2><p>Jump straight into the workflows you use most.</p></div><button class="section-link" onclick="showView('history')">View history →</button></div>
+    <div class="dashboard">
+      <div class="card dash-main"><div class="welcome"><div><div class="pro-pill" style="display:inline-block;margin-bottom:8px">FREE WORKSPACE</div><h3 id="welcomeH">Welcome back 👋</h3><p>What would you like to create today?</p></div><div style="font-size:34px">✦</div></div><div class="quick-actions"><button class="qa" onclick="showView('chat')"><b>Start chat</b><span>Ask anything</span></button><button class="qa" onclick="openUpload()"><b>Upload file</b><span>PDF, DOCX, images</span></button><button class="qa" onclick="showView('image')"><b>Create image</b><span>Generate a visual</span></button><button class="qa" onclick="showView('agent')"><b>Run an agent</b><span>Let AI handle steps</span></button></div><div class="rows"><div class="rowitem"><div class="rowicon">◉</div><div><b>Startup business plan</b><span>Recent AI conversation</span></div><div class="rowtime">Today</div></div><div class="rowitem"><div class="rowicon">▤</div><div><b>Document summary</b><span>Uploaded PDF analysis</span></div><div class="rowtime">Yesterday</div></div><div class="rowitem"><div class="rowicon">&lt;/&gt;</div><div><b>Landing page code</b><span>Code assistant session</span></div><div class="rowtime">2 days ago</div></div></div></div>
+      <div class="card quick-tools"><div class="side-card-title">Quick tools</div><button class="tool" onclick="showView('chat')"><div class="tool-ico">▤</div><div><b>Summarize text</b><span>Turn content into key points</span></div><div class="arrow">›</div></button><button class="tool" onclick="showView('chat')"><div class="tool-ico">文</div><div><b>Translate</b><span>Switch between languages</span></div><div class="arrow">›</div></button><button class="tool" onclick="showView('chat')"><div class="tool-ico">Aa</div><div><b>Grammar checker</b><span>Polish your writing</span></div><div class="arrow">›</div></button><button class="tool" onclick="showView('code')"><div class="tool-ico">Σ</div><div><b>Math solver</b><span>Explain each step</span></div><div class="arrow">›</div></button><button class="tool" onclick="showView('files')"><div class="tool-ico">◈</div><div><b>Document analyzer</b><span>Understand your files</span></div><div class="arrow">›</div></button></div>
+    </div>
+  </div>
+  <div class="section"><div class="section-head"><div><h2>Everything you need in one place</h2><p>Features are designed as building blocks for a real AI product.</p></div></div>
+    <div class="bento">
+      <div class="card b1"><div class="btitle"><div class="feature-icon">✦</div><h3>AI Agents that work in steps</h3></div><p>Turn a large request into a plan, run approved tools, check results and return a clean outcome.</p><div class="mini-ui"><div class="mini-line"></div><div class="mini-line"></div><div class="mini-line"></div></div></div>
+      <div class="card b2"><div class="btitle"><div class="feature-icon">▤</div><h3>File intelligence</h3></div><p>Drag in PDFs, documents or images, then ask questions about the content.</p><div class="dropzone" onclick="openUpload()">＋ <strong>Drop files here</strong>PDF, DOCX, PNG, JPG</div></div>
+      <div class="card b3"><div class="btitle"><div class="feature-icon">▧</div><h3>Creative studio</h3></div><p>Create image prompts and manage visual ideas inside the same workspace.</p><div class="glowline"></div></div>
+      <div class="card b4"><div class="btitle"><div class="feature-icon">&lt;/&gt;</div><h3>Developer workspace</h3></div><p>Write, explain, refactor and debug code with a dedicated coding surface.</p><div class="codebox">const answer = await realmAI.solve(task);<br/>return verify(answer);</div></div>
+      <div class="card b5"><div class="btitle"><div class="feature-icon">◈</div><h3>Knowledge base & custom assistants</h3></div><p>Connect your own instructions and knowledge sources later, so Realm AI can work with information specific to your projects.</p><div class="toolbar"><button class="toolbtn" onclick="showView('knowledge')">Open knowledge base</button><button class="toolbtn" onclick="showView('settings')">Create custom AI</button></div></div>
+    </div>
+  </div>
+  <div class="section"><div class="metrics"><div class="card metric"><div class="value">1</div><div class="label">Unified workspace</div><div class="delta">Chat → agents → files</div></div><div class="card metric"><div class="value">8+</div><div class="label">Core modules</div><div class="delta">Built into this interface</div></div><div class="card metric"><div class="value">∞</div><div class="label">Ideas you can build</div><div class="delta">Your product, your prompts</div></div><div class="card metric"><div class="value">24/7</div><div class="label">Workspace access</div><div class="delta">Once deployed online</div></div></div></div>
+  <div class="footer"><div>© 2026 Realm AI. All rights reserved.</div><div class="footer-links"><button onclick="showView('pricing')">Pricing</button><button onclick="showInfo('Privacy')">Privacy</button><button onclick="showInfo('Terms')">Terms</button></div></div>
+</div></section>
+
+<section class="view" id="chatView"><div class="chat-layout"><aside class="chat-list"><button class="newchat" style="margin-bottom:18px" onclick="clearChat()">＋ New chat</button><h4>Recent</h4><div id="chatList"></div></aside><div class="chat-main"><div class="chat-hero"><div class="eyebrow"><i></i> Assistant online</div><h2>How can I help?</h2><p>Ask, create, analyze, plan or build.</p></div><div class="messages" id="messages"><div class="msg"><div class="avatar">R</div><div class="bubble">Welcome to <b>Realm AI</b>. Try asking me to summarize a document, create a study plan, explain code, or design a workflow.</div></div></div><div class="composer-wrap"><div class="composer"><div class="composer-top"><button class="attach" title="Upload file" onclick="openUpload()">＋</button><button class="attach" title="Image" onclick="showView('image')">▧</button><button class="attach" title="Voice" onclick="startVoice()">♩</button></div><textarea id="prompt" placeholder="Message Realm AI..." rows="2"></textarea><div class="composer-bottom"><span class="mode">Realm Smart</span><span class="mode">Tools ready</span><button class="send" id="send">↑</button></div></div><div class="disclaimer">Realm AI can make mistakes. Please verify important information.</div></div></div><aside class="chat-tools"><div class="card"><div class="side-card-title">Suggested actions</div><button class="tool-row" onclick="document.getElementById('prompt').value='Create a detailed 7-day study plan';document.getElementById('prompt').focus()"><div class="sq">▤</div><div><b>Study plan</b><span>Make a structured plan</span></div></button><button class="tool-row" onclick="openUpload()"><div class="sq">◈</div><div><b>Analyze file</b><span>Upload and ask questions</span></div></button><button class="tool-row" onclick="showView('agent')"><div class="sq">✦</div><div><b>Agent task</b><span>Run a multi-step goal</span></div></button></div><div class="card"><div class="side-card-title">Model</div><div class="notice">Realm Smart gives fast, helpful answers powered by Google Gemini. Your chats are saved on this device.</div></div></aside></div></section>
+
+<section class="view" id="agentView"><div class="page"><div class="page-title"><div class="eyebrow"><i></i> Agent workspace</div><h1>Give Realm AI a goal.</h1><p>Plan → execute approved tools → verify → report. Describe a goal and Realm AI will plan and complete it step by step.</p></div><div class="workspace"><div class="card workspace-main"><textarea class="textarea" id="agentTask" placeholder="Example: Research a topic, organize the findings, summarize them, and create a clean action plan..."></textarea><div class="toolbar"><button class="primary" onclick="runAgent()">Run agent →</button><button class="toolbtn" onclick="toast('Custom tools are coming soon.')">+ Add tool</button><button class="toolbtn" onclick="toast(\'Permissions will be available with tools.\')">⚙ Permissions</button></div><div id="agentStatus" class="notice" style="margin-top:12px">No task running.</div></div><aside class="card workspace-side"><div class="side-card-title">Agent pipeline</div><div class="check"><i></i><span>Understand the goal</span></div><div class="check"><i></i><span>Create a plan</span></div><div class="check"><i></i><span>Call approved tools</span></div><div class="check"><i></i><span>Check outputs</span></div><div class="check"><i></i><span>Return the result</span></div><div class="notice" style="margin-top:14px">Realm Agent plans and reasons step by step. Connected tools are coming soon.</div></aside></div></div></section>
+
+<section class="view" id="filesView"><div class="page"><div class="page-title"><div class="eyebrow"><i></i> File intelligence</div><h1>Your files, ready for AI.</h1><p>Upload text-based files and ask Realm AI about them in Chat.</p></div><div class="card workspace-main"><div class="big-upload" id="bigUpload" onclick="document.getElementById('fileInput').click()"><div style="font-size:28px">⇧</div><strong>Drop files here or click to browse</strong><div style="margin-top:5px">PDF · DOCX · TXT · PNG · JPG · up to your configured limit</div></div><input id="fileInput" type="file" class="hidden" multiple accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" onchange="renderFiles(this.files)"/><div id="fileList"></div><div class="notice" style="margin-top:12px">The browser can select files now. Do not store private customer files on the public frontend; the final version will upload them to authenticated backend storage.</div></div></div></section>
+
+<section class="view" id="imageView"><div class="page"><div class="page-title"><div class="eyebrow"><i></i> Creative studio</div><h1>Turn ideas into images.</h1><p>Prompt builder UI is ready; generation will be connected to your chosen image model in the backend.</p></div><div class="workspace"><div class="card workspace-main"><div id="imgOut" class="answer"></div><textarea class="textarea" id="imgPrompt" placeholder="Describe the image you want to create...">A cinematic futuristic AI workspace with glowing blue and violet glass surfaces, premium SaaS aesthetic, dark background.</textarea><div class="toolbar"><button class="primary" onclick="genImage()">Generate image →</button><button class="toolbtn" id="ratioBtn" onclick="this.classList.toggle('on')">16:9</button><button class="toolbtn" id="hdBtn" onclick="this.classList.toggle('on')">HD</button></div></div><aside class="card workspace-side"><div class="side-card-title">Generation settings</div><div class="check"><i></i><span>Aspect ratio: 16:9</span></div><div class="check"><i></i><span>Quality: Standard</span></div><div class="check"><i></i><span>Style: Cinematic</span></div><div class="notice">No external image API key is included in this frontend.</div></aside></div></div></section>
+
+<section class="view" id="codeView"><div class="page"><div class="page-title"><div class="eyebrow"><i></i> Developer mode</div><h1>Build with your AI pair programmer.</h1><p>Explain, generate, refactor and debug code from a focused workspace.</p></div><div class="workspace"><div class="card workspace-main"><textarea class="textarea" id="codePrompt" placeholder="Ask Realm AI to write or explain code..."></textarea><div class="toolbar"><button class="primary" onclick="askCode()">Ask Realm AI →</button><button class="toolbtn" onclick="codeMode('Explain this code')">Explain</button><button class="toolbtn" onclick="codeMode('Refactor this code')">Refactor</button><button class="toolbtn" onclick="codeMode('Find and fix bugs in this code')">Debug</button></div><div id="codeOut" class="answer"></div></div><aside class="card workspace-side"><div class="side-card-title">Developer tools</div><div class="check"><i></i><span>Code generation</span></div><div class="check"><i></i><span>Bug explanations</span></div><div class="check"><i></i><span>Refactoring</span></div><div class="check"><i></i><span>Documentation</span></div></aside></div></div></section>
+
+<section class="view" id="knowledgeView"><div class="page"><div class="page-title"><div class="eyebrow"><i></i> Knowledge base</div><h1>Teach Realm AI your context.</h1><p>Create private knowledge collections later and attach them to assistants or agents.</p></div><div class="bento"><div class="card b1"><div class="btitle"><div class="feature-icon">◈</div><h3>Workspace knowledge</h3></div><p>Upload approved documents and organize them by project, topic or assistant.</p><button class="toolbtn" style="margin-top:15px" onclick="openUpload()">Add sources</button></div><div class="card b2"><div class="btitle"><div class="feature-icon">◇</div><h3>Custom instructions</h3></div><p>Define how an assistant should speak, format outputs and handle tasks.</p><button class="toolbtn" style="margin-top:15px" onclick="toast('Custom AI builder is coming soon.')">Create custom AI</button></div><div class="card b3"><div class="btitle"><div class="feature-icon">⌕</div><h3>Search</h3></div><p>Find content across your connected knowledge.</p></div></div></div></section>
+
+<section class="view" id="historyView"><div class="page"><div class="page-title"><div class="eyebrow"><i></i> Conversation history</div><h1>Your work, organized.</h1><p>Recent chats will be stored in your authenticated account after database connection.</p></div><div class="card dash-main"><div class="rows"><div class="rowitem"><div class="rowicon">◉</div><div><b>Startup business plan</b><span>Created a detailed practice schedule</span></div><div class="rowtime">Today</div></div><div class="rowitem"><div class="rowicon">▤</div><div><b>Document summary</b><span>Key findings from a PDF</span></div><div class="rowtime">Yesterday</div></div><div class="rowitem"><div class="rowicon">&lt;/&gt;</div><div><b>Website assistant</b><span>Generated UI structure</span></div><div class="rowtime">2 days ago</div></div></div></div></div></section>
+
+<section class="view" id="pricingView"><div class="page"><div class="page-title"><div class="eyebrow"><i></i> Plans & billing</div><h1>Choose your Realm.</h1><p>Simple pricing. Upgrade any time and unlock more power.</p></div><div class="plans"><div class="card plan "><h3>Starter</h3><div class="price">$5 <span class="per">/ month</span></div><ul><li>Everyday AI chat</li><li>Higher daily limits</li><li>Text file analysis</li><li>Image generator</li><li>Saved chat history</li></ul><button class="secondary" style="width:100%" onclick="buyPlan('starter')">Get Starter</button></div><div class="card plan pro"><span class="popular">POPULAR</span><h3>Pro</h3><div class="price">$15 <span class="per">/ month</span></div><ul><li>Everything in Starter</li><li>Much higher usage</li><li>AI Agent mode</li><li>Code Assistant</li><li>Faster responses</li></ul><button class="primary" style="width:100%" onclick="buyPlan('pro')">Get Pro</button></div><div class="card plan "><h3>Ultimate</h3><div class="price">$25 <span class="per">/ month</span></div><ul><li>Everything in Pro</li><li>Highest usage limits</li><li>Advanced agent workflows</li><li>Early access to new features</li><li>Priority support</li></ul><button class="secondary" style="width:100%" onclick="buyPlan('ultimate')">Get Ultimate</button></div><div class="card plan "><h3>Enterprise</h3><div class="price">Custom</div><ul><li>Custom usage limits</li><li>Team workspace</li><li>Admin controls</li><li>Dedicated support</li><li>Custom integrations</li></ul><button class="secondary" style="width:100%" onclick="contactSales()">Contact sales</button></div></div><div class="notice" style="margin-top:14px;text-align:center">Secure checkout by Paddle. Cancel any time. Prices in USD. Realm AI is free to try.</div></div></section>
+
+<section class="view" id="settingsView"><div class="page"><div class="page-title"><div class="eyebrow"><i></i> Settings</div><h1>Make Realm AI yours.</h1><p>Personalize your workspace.</p></div><div class="workspace"><div class="card workspace-main"><div class="stack"><label style="font-size:10px;color:#7f8ca5">Display name<input class="input" value="Guest" /></label><label style="font-size:10px;color:#7f8ca5">Assistant name<input class="input" value="Realm AI" /></label><label style="font-size:10px;color:#7f8ca5">Response style<select class="input"><option>Balanced</option><option>Concise</option><option>Detailed</option></select></label><button class="primary" onclick="savePrefs()">Save preferences</button></div></div><aside class="card workspace-side"><div class="side-card-title">Security</div><div class="check"><i></i><span>Keep API keys server-side</span></div><div class="check"><i></i><span>Authenticated file storage</span></div><div class="check"><i></i><span>Server-verified payments</span></div></aside></div></div></section>
+</main></div>
+
+<div class="modal" id="loginModal"><div class="modalbox"><div class="modalhead"><h3>Welcome to Realm AI</h3><button class="close" onclick="closeModal('loginModal')">×</button></div><p style="color:#73829d;font-size:11px">Sign in to sync your chats across devices and unlock Pro.</p><div class="stack"><input class="input" type="email" placeholder="Email address"><input class="input" type="password" placeholder="Password"><button class="primary" onclick="loginSoon()">Continue →</button></div></div></div>
+
+<div class="drop-upload" id="uploadModal"><div class="uploadbox"><button class="close" style="float:right" onclick="closeModal('uploadModal')">×</button><div style="font-size:34px">⇧</div><h3>Upload to Realm AI</h3><p>Choose files to preview them in the workspace.</p><div class="big-upload" onclick="document.getElementById('uploadInput').click()"><strong>Click to browse files</strong><div style="margin-top:5px;font-size:9px">PDF · DOCX · TXT · PNG · JPG</div></div><input id="uploadInput" type="file" class="hidden" multiple accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" onchange="renderFiles(this.files,true)"/><div id="uploadPreview"></div><button class="primary" style="margin-top:12px" onclick="closeModal('uploadModal')">Done</button></div></div>
+
+<script>
+const views=['home','chat','agent','files','image','code','knowledge','history','pricing','settings'];
+function showView(v){
+  views.forEach(x=>{const el=document.getElementById(x+'View');if(el)el.classList.toggle('show',x===v)});
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
+  const labels={home:'Home',chat:'Chat',agent:'AI Agent',files:'Files',image:'Image Generator',code:'Code Assistant',knowledge:'Knowledge Base',history:'History',pricing:'Plans & Billing',settings:'Settings'};
+  document.getElementById('crumbName').textContent=labels[v]||'Home';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
+document.getElementById('newChat').onclick=()=>{showView('chat');clearChat()};
+document.getElementById('headerUpgrade').onclick=()=>showView('pricing');document.getElementById('upgradeBtn').onclick=()=>showView('pricing');
+document.getElementById('loginBtn').onclick=()=>openModal('loginModal');
+function openModal(id){document.getElementById(id).classList.add('show')}function closeModal(id){document.getElementById(id).classList.remove('show')}
+
+/* ===== PADDLE CONFIG — sandbox first ===== */
+const PADDLE={env:'sandbox',token:'',prices:{starter:'',pro:'',ultimate:''}};
+/* ===== SALES CONFIG — email that receives Enterprise enquiries ===== */
+const SALES={email:''};
+function openUpload(){openModal('uploadModal')}
+function clearChat(){document.getElementById('messages').innerHTML='<div class="msg"><div class="avatar">R</div><div class="bubble">New chat started. What would you like to work on?</div></div>';document.getElementById('prompt').value='';}
+document.getElementById('send').onclick=()=>window.sendMsg();document.getElementById('prompt').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg()}});
+function renderFiles(files,modal=false){const target=document.getElementById(modal?'uploadPreview':'fileList');target.innerHTML='';[...files].forEach(f=>{const el=document.createElement('span');el.className='file-pill';el.textContent='▤ '+f.name+' · '+Math.max(1,Math.round(f.size/1024))+' KB';target.appendChild(el)})}
+const big=document.getElementById('bigUpload');if(big){['dragenter','dragover'].forEach(ev=>big.addEventListener(ev,e=>{e.preventDefault();big.style.borderColor='#65aaff'}));['dragleave','drop'].forEach(ev=>big.addEventListener(ev,e=>{e.preventDefault();big.style.borderColor='#355c8d'}));big.addEventListener('drop',e=>renderFiles(e.dataTransfer.files));}
+window.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.modal.show,.drop-upload.show').forEach(x=>x.classList.remove('show'))}});
+
+</script>
+
+<script>
+/* Realm AI — chat engine, history, agent, code, image, voice */
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const KEY='realm_chats_v2',SKEY='realm_settings_v1';
+let store={cur:null,chats:[]},settings={name:'Guest'},busy=false,attached=null;
+try{store=JSON.parse(localStorage.getItem(KEY))||store}catch(e){}
+try{settings=Object.assign(settings,JSON.parse(localStorage.getItem(SKEY)))}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}};
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+function md(t){
+  const blocks=[];
+  t=esc(t).replace(/```(\w*)\n?([\s\S]*?)```/g,(m,l,c)=>{blocks.push('<pre><span class="lang">'+(l||'code')+'</span><button class="copycode" onclick="copyCode(this)">Copy</button><code>'+c.replace(/\n$/,'')+'</code></pre>');return '\u0000'+(blocks.length-1)+'\u0000'});
+  t=t.replace(/`([^`\n]+)`/g,'<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>')
+   .replace(/^#{1,4} (.+)$/gm,'<h4>$1</h4>')
+   .replace(/^(?:[-*] .+(?:\n|$))+/gm,m=>'<ul>'+m.trim().split('\n').map(x=>'<li>'+x.slice(2)+'</li>').join('')+'</ul>')
+   .replace(/^(?:\d+\. .+(?:\n|$))+/gm,m=>'<ol>'+m.trim().split('\n').map(x=>'<li>'+x.replace(/^\d+\. /,'')+'</li>').join('')+'</ol>')
+   .replace(/\n/g,'<br>').replace(/(<\/(?:h4|ul|ol|pre)>)(?:<br>)+/g,'$1').replace(/(?:<br>)+(<(?:h4|ul|ol|pre))/g,'$1');
+  return t.replace(/\u0000(\d+)\u0000/g,(m,i)=>blocks[i]);
+}
+window.copyCode=b=>{navigator.clipboard?.writeText(b.parentElement.querySelector('code').textContent);b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1400)};
+function toast(m){let t=$('toast');if(!t){t=document.createElement('div');t.id='toast';document.body.appendChild(t)}t.textContent=m;t.className='show';clearTimeout(t._h);t._h=setTimeout(()=>t.className='',2600)}
+window.toast=toast;
+
+function cur(){let c=store.chats.find(x=>x.id===store.cur);if(!c){c={id:Date.now()+'',title:'New chat',messages:[]};store.chats.unshift(c);store.cur=c.id;save()}return c}
+function renderList(){const el=$('chatList');if(!el)return;el.innerHTML=store.chats.filter(c=>c.messages.length).map(c=>'<div class="chat-title'+(c.id===store.cur?' active':'')+'" data-id="'+c.id+'"><span>'+esc(c.title)+'</span><b class="del" data-del="'+c.id+'">✕</b></div>').join('')||'<div class="chat-title" style="opacity:.6">No chats yet</div>'}
+function renderChat(){
+  const c=cur(),box=$('messages');
+  if(!c.messages.length){box.innerHTML='<div class="msg"><div class="avatar">R</div><div class="bubble">Hi, I\'m <b>Realm AI</b>. Ask me anything: write, plan, code, analyze or brainstorm.</div></div>'}
+  else box.innerHTML=c.messages.map((m,i)=>m.role==='user'?'<div class="msg me"><div class="bubble">'+esc(m.content).replace(/\n/g,'<br>')+'</div></div>':'<div class="msg"><div class="avatar">R</div><div class="bubble">'+md(m.content)+'<div class="acts"><button onclick="copyMsg('+i+')">Copy</button>'+(i===c.messages.length-1?'<button onclick="regen()">Regenerate</button>':'')+'</div></div></div>').join('');
+  const hero=document.querySelector('.chat-hero');if(hero)hero.style.display=c.messages.length?'none':'';box.scrollTop=box.scrollHeight;renderList();
+}
+window.copyMsg=i=>{navigator.clipboard?.writeText(cur().messages[i].content);toast('Copied to clipboard')};
+document.addEventListener('click',e=>{const d=e.target.closest('[data-del]');if(d){store.chats=store.chats.filter(c=>c.id!==d.dataset.del);if(store.cur===d.dataset.del)store.cur=null;save();renderChat();e.stopPropagation();return}const t=e.target.closest('#chatList .chat-title[data-id]');if(t){store.cur=t.dataset.id;save();renderChat()}});
+
+const SYS='You are Realm AI, a helpful, friendly assistant. Reply in English unless the user writes in another language. Be clear and concise.';
+async function direct(messages,k){
+  const contents=messages.map(m=>({role:m.role==='user'?'user':'model',parts:[{text:m.content}]}));
+  while(contents.length&&contents[0].role!=='user')contents.shift();
+  const model=localStorage.getItem('realm_gemini_model')||'gemini-2.5-flash-lite';
+  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':k},body:JSON.stringify({systemInstruction:{parts:[{text:SYS}]},contents})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error((d.error&&d.error.message)||'Gemini request failed. Check your API key and model name in Settings.');
+  return (d.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('')||'I could not generate a reply. Please try again.';
+}
+async function callAI(messages){
+  let r=null,d={};
+  try{r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages})});d=await r.json().catch(()=>({}))}catch(e){r=null}
+  if(r&&r.ok)return d.text;
+  const noBackend=!r||r.status===404||r.status===405||(r.status===500&&/not configured/i.test(d.error||''));
+  const k=localStorage.getItem('realm_gemini_key');
+  if(noBackend&&k)return direct(messages,k);
+  if(noBackend)throw new Error('The AI backend is not connected yet. To test on your own computer, open Settings and paste your Gemini API key. After you deploy on Cloudflare, it works automatically for everyone.');
+  throw new Error(d.error||'Realm AI is temporarily unavailable. Please try again.');
+}
+async function reveal(el,text,box){const w=text.split(/(\s+)/);let o='';for(let i=0;i<w.length;i++){o+=w[i];if(i%8===0||i===w.length-1){el.innerHTML=md(o);if(box)box.scrollTop=box.scrollHeight;await sleep(12)}}}
+
+async function ask(text,regen){
+  if(busy)return;const c=cur();
+  if(!regen){c.messages.push({role:'user',content:text});if(c.title==='New chat')c.title=text.slice(0,42)}
+  save();renderChat();busy=true;$('send').disabled=true;
+  const box=$('messages');box.insertAdjacentHTML('beforeend','<div class="msg" id="live"><div class="avatar">R</div><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div></div>');box.scrollTop=box.scrollHeight;
+  const payload=c.messages.slice(-12).map(m=>({role:m.role,content:m.content}));
+  if(attached&&!regen){const l=payload[payload.length-1];l.content='[Attached file: '+attached.name+']\n'+attached.text+'\n\n'+l.content;attached=null;if($('fileList'))$('fileList').innerHTML=''}
+  const bub=$('live').querySelector('.bubble');
+  try{const reply=await callAI(payload);await reveal(bub,reply,box);c.messages.push({role:'assistant',content:reply});save()}
+  catch(e){bub.innerHTML='<b>Something went wrong.</b><br>'+esc(e.message)+'<div class="acts">'+(/not connected/i.test(e.message)?'<button onclick="showView(\'settings\')">Open Settings</button>':'')+'<button onclick="regen()">Try again</button></div>'}
+  busy=false;$('send').disabled=false;
+  if(c.messages.length&&c.messages[c.messages.length-1].role==='assistant')renderChat();else renderList();
+}
+window.sendMsg=async function(){const p=$('prompt'),t=p.value.trim();if(!t||busy)return;p.value='';await ask(t)};
+window.regen=function(){const c=cur();if(busy)return;while(c.messages.length&&c.messages[c.messages.length-1].role==='assistant')c.messages.pop();if(c.messages.length)ask(null,true)};
+window.clearChat=function(){const c=cur();if(c.messages.length){store.cur=null;cur()}renderChat();$('prompt').value='';$('prompt').focus()};
+
+/* Files: text-based files are read in the browser and sent with your next message */
+window.renderFiles=function(files,modal){
+  const target=$(modal?'uploadPreview':'fileList');if(!target)return;target.innerHTML='';
+  [...files].forEach(f=>{const el=document.createElement('span');el.className='file-pill';el.textContent='▤ '+f.name+' · '+Math.max(1,Math.round(f.size/1024))+' KB';target.appendChild(el)});
+  const f=[...files].find(x=>/\.(txt|md|csv|json|js|py|html|css)$/i.test(x.name));
+  if(f){const fr=new FileReader();fr.onload=()=>{attached={name:f.name,text:String(fr.result).slice(0,30000)};toast('"'+f.name+'" attached. Ask a question about it in Chat.')};fr.readAsText(f)}
+  else if(files.length)toast('Only text-based files can be read right now (.txt, .md, .csv, .json, code).');
+};
+
+/* Agent */
+window.runAgent=async function(){
+  const t=$('agentTask').value.trim(),s=$('agentStatus');if(!t){s.textContent='Describe a goal first.';return}
+  s.className='answer';s.innerHTML='<span class="typing"><i></i><i></i><i></i></span> Planning and working…';
+  try{const r=await callAI([{role:'user',content:'You are Realm Agent, an autonomous assistant. For the goal below: 1) write a short numbered plan, 2) carry out each step and show the work, 3) finish with a "Result" section with the final deliverable.\n\nGoal: '+t}]);await reveal(s,r)}
+  catch(e){s.textContent=e.message}
+};
+window.runAgentDemo=window.runAgent;
+
+/* Code */
+let cmode='Answer this coding request';
+window.codeMode=m=>{cmode=m;toast('Mode: '+m)};
+window.askCode=async function(){
+  const t=$('codePrompt').value.trim(),o=$('codeOut');if(!t){toast('Paste code or describe what you need.');return}
+  o.innerHTML='<span class="typing"><i></i><i></i><i></i></span>';
+  try{const r=await callAI([{role:'user',content:'You are an expert software engineer. Task: '+cmode+'. Use fenced code blocks and be concise.\n\n'+t}]);await reveal(o,r)}catch(e){o.textContent=e.message}
+};
+
+/* Image */
+window.genImage=function(){
+  const p=$('imgPrompt').value.trim(),o=$('imgOut');if(!p){toast('Describe the image first.');return}
+  o.innerHTML='<span class="typing"><i></i><i></i><i></i></span> Creating your image…';
+  const wide=$('ratioBtn')&&$('ratioBtn').classList.contains('on'),hd=$('hdBtn')&&$('hdBtn').classList.contains('on'),k=hd?1.5:1,dim=wide?[Math.round(1024*k),Math.round(576*k)]:[Math.round(1024*k),Math.round(1024*k)];const img=new Image();img.alt=p;img.onload=()=>{o.innerHTML='';o.appendChild(img);const a=document.createElement('a');a.href=img.src;a.target='_blank';a.textContent='Open full size';a.className='dl';o.appendChild(a)};
+  img.onerror=()=>{o.textContent='Image generation is busy right now. Please try again in a moment.'};
+  img.src='https://image.pollinations.ai/prompt/'+encodeURIComponent(p)+'?width='+dim[0]+'&height='+dim[1]+'&nologo=true&seed='+Math.floor(Math.random()*1e6);
+};
+
+/* Voice */
+window.startVoice=function(){const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R){toast('Voice input is not supported in this browser.');return}const r=new R();r.lang='en-US';r.onresult=e=>{$('prompt').value=e.results[0][0].transcript;$('prompt').focus()};r.onerror=()=>toast('Could not hear you. Please try again.');toast('Listening…');r.start()};
+
+
+/* Paddle checkout + Contact sales */
+let pInit=false;
+function paddleReady(){
+  if(!window.Paddle||!PADDLE.token)return false;
+  if(!pInit){if(PADDLE.env==='sandbox')Paddle.Environment.set('sandbox');
+    Paddle.Initialize({token:PADDLE.token,eventCallback:e=>{if(e&&e.name==='checkout.completed')toast('Payment successful! Your plan will be activated shortly.')}});pInit=true}
+  return true;
+}
+window.buyPlan=function(plan){
+  const id=PADDLE.prices[plan];
+  if(!window.Paddle){toast('Checkout could not load. Please disable ad blockers and try again.');return}
+  if(!paddleReady()||!id){console.warn('Paddle is not configured: set PADDLE.token and PADDLE.prices in index.html');toast('Checkout is not available yet. Please try again soon.');return}
+  Paddle.Checkout.open({items:[{priceId:id,quantity:1}],customData:{plan},settings:{displayMode:'overlay',theme:'dark',locale:'en'}});
+};
+window.contactSales=function(){
+  let m=$('salesModal');
+  if(!m){document.body.insertAdjacentHTML('beforeend','<div class="modal" id="salesModal"><div class="modalbox"><div class="modalhead"><h3>Contact sales</h3><button class="close" onclick="closeModal(\'salesModal\')">×</button></div><p style="color:#73829d;font-size:12px;line-height:1.55">Tell us about your team and needs. We will reply within one business day.</p><div class="stack"><input class="input" id="sName" placeholder="Your name"><input class="input" id="sEmail" type="email" placeholder="Work email"><input class="input" id="sCompany" placeholder="Company (optional)"><textarea class="input" id="sMsg" rows="4" placeholder="How can we help?"></textarea><button class="primary" onclick="sendSales()">Send message</button></div></div></div>');m=$('salesModal')}
+  openModal('salesModal');
+};
+window.sendSales=function(){
+  const n=$('sName').value.trim(),e=$('sEmail').value.trim(),c=$('sCompany').value.trim(),t=$('sMsg').value.trim();
+  if(!n||!e||!t){toast('Please fill in your name, email and message.');return}
+  if(!SALES.email){toast('Sales contact is not available right now. Please try again later.');return}
+  location.href='mailto:'+SALES.email+'?subject='+encodeURIComponent('Realm AI Enterprise enquiry')+'&body='+encodeURIComponent('Name: '+n+'\nEmail: '+e+'\nCompany: '+c+'\n\n'+t);
+};
+
+/* Settings, login, legal */
+function applyName(){const n=settings.name||'Guest';document.querySelectorAll('.profile-name').forEach(x=>x.textContent=n);document.querySelectorAll('.profile .avatar,#loginBtn').forEach(x=>x.textContent=n[0].toUpperCase());const h=$('welcomeH');if(h)h.textContent=n==='Guest'?'Welcome back 👋':'Welcome back, '+n+' 👋';const i=$('settingsView').querySelector('input:not([type=password])');if(i)i.value=n}
+window.savePrefs=function(){try{const gk=$('gKey');if(gk){gk.value.trim()?localStorage.setItem('realm_gemini_key',gk.value.trim()):localStorage.removeItem('realm_gemini_key');$('gModel').value.trim()?localStorage.setItem('realm_gemini_model',$('gModel').value.trim()):localStorage.removeItem('realm_gemini_model')}}catch(e){}const i=$('settingsView').querySelector('input:not([type=password])');settings.name=(i.value||'Guest').trim().slice(0,30);try{localStorage.setItem(SKEY,JSON.stringify(settings))}catch(e){}applyName();toast('Preferences saved')};
+window.loginSoon=()=>toast('Accounts are launching soon. Your chats are saved on this device.');
+const LEGAL={Privacy:'Your chats are stored in your own browser. Messages you send are processed by our AI provider to generate replies. Never share passwords, card numbers or other secrets in chat. We do not store payment card details.',Terms:'Realm AI can make mistakes, so please verify important information and do not rely on it for medical, legal or financial decisions. Paid plans are billed monthly through Paddle, our payment provider, and can be cancelled at any time.'};
+window.showInfo=function(k){let m=$('infoModal');if(!m){document.body.insertAdjacentHTML('beforeend','<div class="modal" id="infoModal"><div class="modalbox"><div class="modalhead"><h3 id="infoT"></h3><button class="close" onclick="closeModal(\'infoModal\')">×</button></div><p id="infoB" style="color:#9fb0cc;font-size:13px;line-height:1.6"></p></div></div>');m=$('infoModal')}$('infoT').textContent=k;$('infoB').textContent=LEGAL[k];openModal('infoModal')};
+
+document.addEventListener('DOMContentLoaded',()=>{const st=document.querySelector('#settingsView .stack');if(st)st.insertAdjacentHTML('afterbegin','<label style="font-size:10px;color:#7f8ca5">Gemini API key (for testing on your computer only)<input class="input" id="gKey" type="password" placeholder="Paste key from aistudio.google.com" /></label><label style="font-size:10px;color:#7f8ca5">Gemini model (optional)<input class="input" id="gModel" placeholder="gemini-2.5-flash-lite" /></label>');const gk=$('gKey');if(gk){gk.value=localStorage.getItem('realm_gemini_key')||'';$('gModel').value=localStorage.getItem('realm_gemini_model')||''}applyName();renderChat();const p=$('prompt');p.addEventListener('input',()=>{p.style.height='auto';p.style.height=Math.min(p.scrollHeight,180)+'px'})});
+})();
+
+
+/* Mobile navigation, dead-button wiring */
+document.addEventListener('DOMContentLoaded',()=>{
+  const sb=document.querySelector('.sidebar'),mb=document.getElementById('mobileNav');
+  if(mb&&sb)mb.addEventListener('click',e=>{e.stopPropagation();sb.classList.toggle('open')});
+  document.addEventListener('click',e=>{if(sb&&sb.classList.contains('open')&&(!sb.contains(e.target)||e.target.closest('.sidebar button,.sidebar [data-view]')))sb.classList.remove('open')});
+  document.querySelectorAll('.tool-row,.rowitem').forEach(el=>{if(el.getAttribute('onclick'))return;el.style.cursor='pointer';el.addEventListener('click',()=>{const t=el.innerText;showView(/code/i.test(t)?'code':/document|pdf|file/i.test(t)?'files':'chat')})});
+});
+</script>
+</body>
+</html>
