@@ -54,14 +54,27 @@ These two are the difference between "deployed" and "reachable by a customer" �
 account can open the site until #1 is off (verified from outside on 2026-09-29: `https://reralm-ai.netlify.app/api/health`
 answers with Netlify's sign-in wall instead of the app):
 
-1. **Visitor access / password protection is ON for the whole site.** Every URL — production and previews —
-   answers with Netlify's "This site is private — sign in" wall. Go to
-   **Site configuration → Access & security control → Password protection** → turn it off
-   (or scope it to branch deploys only). This one toggle is why the site looks broken to a visitor even
-   though the deploy is green. Then confirm from a phone (mobile data, not logged into Netlify):
-   `https://reralm-ai.netlify.app/api/health` should print JSON.
-   *Why it was on:* Netlify enables "Deploy protected" for some GitHub-imported sites by default — it is not
-   something you did wrong, but it does have to be switched off manually.*
+1. **Project visibility is `Private`, so the whole site is behind Netlify login.** Every URL — production and
+   previews — answers with "This site is private — sign in" instead of the app. Verified from outside:
+   `https://reralm-ai.netlify.app/` returns Netlify's edge-access wall even after a green deploy, so *this* is
+   the last thing between "deployed" and "live". Fix (on credit-based plans, which includes free accounts
+   created after Sep 2025):
+
+   **Netlify → your project → Project configuration → General → Visitor access → Project visibility → `Public`**
+   (older/Enterprise UI: Project configuration → Access & security → Visitor access → Password protection → off).
+
+   Two gotchas, both common:
+   - The scope below the selector matters: **"Production and previews"** protects everything,
+     **"Previews only"** keeps the live site public — pick that if you want shareable previews to stay gated.
+   - If the per-project selector is greyed out, a **team default** is overriding it: Team settings → General →
+     Visitor access → Default project visibility → choose *Public for new projects* (the "Private for all
+     projects" setting locks every existing project too, and individual projects cannot be made public).
+
+   Confirm with something that is *not* logged into Netlify — a phone on mobile data, or a private window:
+   `https://reralm-ai.netlify.app/api/health` should print JSON. `curl` from a sandbox or CI box will also
+   show the wall, which is why this bug survives "my checks pass".
+   *Note:* `Private` is Netlify's default for new projects now — nothing you did wrong, but it does have to be
+   flipped manually before you send anyone the link.*
 2. **The site name has a typo** (`reralm-ai`). Site configuration → General → Change site name →
    `realm-ai`, which also renames the free subdomain to `realm-ai.netlify.app` and every preview URL.
    Old links stop working, so do it **before** you start sharing the URL, then sync the SEO files to the

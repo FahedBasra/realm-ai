@@ -91,7 +91,8 @@ If `/api/health` answers, the API plumbing is fine and the problem is a secret/v
 | `/` is 404 on Netlify but fine on workers.dev | the site publishes the repo root | `netlify.toml` pins `publish = "public"`; commit it and redeploy |
 | `404 function not found` on `/api/chat` | the `/api/*` redirect is missing, or the function didn't build | keep `[[redirects]] from = "/api/*"` and `node_bundler = "esbuild"` in `netlify.toml`; check the deploy log for the function listing |
 | Chat works on one host, not the other | secrets only exist in one provider | set `GEMINI_API_KEY` on the host that serves visitors (`CLOUDFLARE.md` §C), or split deliberately: pages on Netlify + `<meta name="realm:api">` pointing at a Worker (`CLOUDFLARE.md` §D) |
-| Visitors are asked to sign in to Netlify | Deploy preview / site password protection | Site settings → Access & security → disable protection for public sites |
+| Visitors (or you, on your phone) see "This site is private — sign in" on Netlify | Project visibility is `Private` — Netlify's default for projects created on credit-based plans | Project configuration → General → Visitor access → **Project visibility → Public**. Greyed out? Team settings → General → Visitor access → Default project visibility → *Public for new projects*. Preview-only protection: scope it to "Previews only" |
+| `/api/health` works in the dashboard "deploy preview" link but not on the main URL (or vice versa) | The two are protected separately by that scope setting | Decide deliberately: production public, previews gated is the usual launch state |
 
 ## Still stuck?
 
