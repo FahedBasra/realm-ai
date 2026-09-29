@@ -108,6 +108,40 @@ One thing Netlify can silently do to you: **Site settings → Access & security 
 previews / password" protection. If `...netlify.app` asks a visitor to sign in to Netlify, that switch is on
 for non-production deploys (or for the whole site) — turn it off for a public product.
 
+## D · Site on Netlify, API on a Cloudflare Worker (best of the two free tiers)
+
+Use this when you want Netlify's git preview workflow for the pages but need more than 10 seconds per AI
+answer. One deploy each, one shared codebase (`shared/api.js`), nothing to rewrite.
+
+1. Deploy the API on Workers — it serves `/api/*` and you can ignore its static assets:
+   ```bash
+   npx wrangler login
+   npx wrangler secret put GEMINI_API_KEY
+   npx wrangler deploy            # → https://realm-ai.<account>.workers.dev
+   ```
+2. Allow the Netlify origin to call it (otherwise the browser blocks the response):
+   ```bash
+   npx wrangler secret put ALLOWED_ORIGINS     # value: https://reralm-ai.netlify.app
+   ```
+   (comma-separate more origins, e.g. `https://realm.ai,https://www.realm.ai`). Requests with no `Origin`
+   header — curl, Paddle's webhook — are unaffected.
+3. On Netlify, set the API base: **Site configuration → Environment variables → `REALM_API_BASE`** is not
+   enough (the page is static), so put the URL in `public/index.html` instead:
+   ```html
+   <meta name="realm:api" content="https://realm-ai.<account>.workers.dev" />
+   ```
+   Everything (`/api/chat`, `/api/agent`, `/api/health`, `/api/paddle-config`) then goes to the Worker
+   while the HTML/JS stays on Netlify. `npm test` asserts the base is normalised and that the default is
+   still same-origin, so leaving the tag empty keeps the simple setup.
+4. Point Paddle's webhook at `https://realm-ai.<account>.workers.dev/api/paddle/webhook` (the Worker, not
+   Netlify — the function timeout doesn't matter there, but keep it to one place so events aren't
+   journalled twice).
+5. Verify:
+   ```bash
+   curl -sI -X OPTIONS https://realm-ai.<acct>.workers.dev/api/chat -H "Origin: https://reralm-ai.netlify.app" | grep -i access-control
+   curl -s https://<netlify-site>/api/health          # → 404, expected: Netlify no longer serves the API
+   ```
+
 ## Secrets
 
 | Secret | Where it's read | If missing |

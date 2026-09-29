@@ -159,6 +159,17 @@ await test('a SHA-1 subkey (older Paddle accounts) is rejected on purpose', asyn
   assert.equal(res.status, 401);
 });
 
+await test('a browser on another site is refused CORS until ALLOWED_ORIGINS says otherwise', async () => {
+  const foreign = new Request('https://realm.test/api/health', { headers: { origin: 'https://skimmer.example' } });
+  const denied = await handleApi(foreign, EMPTY);
+  assert.equal(denied.headers.get('access-control-allow-origin'), null);
+  const allowed = await handleApi(foreign, { ALLOWED_ORIGINS: 'https://skimmer.example' });
+  assert.equal(allowed.headers.get('access-control-allow-origin'), 'https://skimmer.example');
+  const preflight = await handleApi(new Request('https://realm.test/api/chat', { method: 'OPTIONS', headers: { origin: 'https://skimmer.example' } }), { ALLOWED_ORIGINS: 'https://skimmer.example' });
+  assert.equal(preflight.status, 204);
+  assert.match(preflight.headers.get('access-control-allow-methods'), /POST/);
+});
+
 console.log('\nrate limiting (in-isolate fallback)');
 await test('locks down after the configured burst and returns retry-after', async () => {
   const env = { GEMINI_API_KEY: 'k', RATE_LIMIT_PER_MINUTE: 3 };

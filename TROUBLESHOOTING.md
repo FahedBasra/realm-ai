@@ -68,7 +68,9 @@ If `/api/health` answers, the API plumbing is fine and the problem is a secret/v
 |---|---|---|
 | Agent says "The AI backend is not connected yet" | same single secret as chat (`GEMINI_API_KEY`) on the host serving the page | `curl -s https://SITE/api/health` — `ai.configured` decides everything here |
 | A step fails and says `Step 2 failed: …` | that one model call errored (quota, timeout, blocked) | earlier steps are kept on screen; press Run again — the plan is re-made, but you can also just retry by re-running |
-| `FUNCTION_TIMEOUT` in Netlify logs instead of a message in the UI | a single request outlived 26 s | don't merge the phases back into one call; keep `PROVIDER_TIMEOUT_MS` (default 21000 on Netlify) below the ceiling |
+| `FUNCTION_TIMEOUT` / `502` from `/.netlify/functions/api` | the free plan kills Functions at **10 s**; a single answer outlived it | keep phases separate (`PROVIDER_TIMEOUT_MS=8000` already self-aborts), lower `GEMINI_MAX_TOKENS`, or host the API on a Worker (`CLOUDFLARE.md` §D) |
+| Netlify **deploy fails in seconds**, before `npm run check` output appears | `[functions] timeout` above the plan limit in `netlify.toml` | remove the key. `npm run check` now errors on it. Paid plan is the only way to raise it (~26-30 s) |
+| Browser says `blocked by CORS policy` and the API is on another origin | `ALLOWED_ORIGINS` not set on the API host | set it on the Worker/Pages (comma-separated list), then redeploy; the request needs no credentials, so no `allow-credentials` |
 | Plan step cards stay on "Checking the result against the goal…" | the verify call is the longest one (it re-reads every step) | expected on long runs; shorten the goal, or lower `GEMINI_MAX_TOKENS` |
 | Plan text appears as one blob with a "fallback" note | the model returned prose instead of JSON | harmless: `parseJsonObject` recovers prose into one usable step; set `GEMINI_MODEL` to a stronger model if you want real multi-step plans |
 | Stop does nothing mid-request | Stop applies after the current step (the request can't be cancelled safely server-side) | by design — you keep the results of finished steps |
@@ -79,7 +81,7 @@ If `/api/health` answers, the API plumbing is fine and the problem is a secret/v
 |---|---|---|
 | `/` is 404 on Netlify but fine on workers.dev | the site publishes the repo root | `netlify.toml` pins `publish = "public"`; commit it and redeploy |
 | `404 function not found` on `/api/chat` | the `/api/*` redirect is missing, or the function didn't build | keep `[[redirects]] from = "/api/*"` and `node_bundler = "esbuild"` in `netlify.toml`; check the deploy log for the function listing |
-| Chat works on one host, not the other | secrets only exist in one provider | set `GEMINI_API_KEY` on the host that serves visitors (see `CLOUDFLARE.md` section C) |
+| Chat works on one host, not the other | secrets only exist in one provider | set `GEMINI_API_KEY` on the host that serves visitors (`CLOUDFLARE.md` §C), or split deliberately: pages on Netlify + `<meta name="realm:api">` pointing at a Worker (`CLOUDFLARE.md` §D) |
 | Visitors are asked to sign in to Netlify | Deploy preview / site password protection | Site settings → Access & security → disable protection for public sites |
 
 ## Still stuck?

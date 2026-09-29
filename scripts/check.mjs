@@ -184,6 +184,10 @@ if (exists('netlify.toml')) {
     errors.push(`netlify.toml publishes "${pub.trim()}" but wrangler.json uses "${assetsDir}" — the two hosts would serve different trees`);
   }
   if (!toml.includes('/api/*')) errors.push('netlify.toml has no /api/* redirect, so the Netlify deploy has no chat API');
+  const fnTimeout = (toml.match(/^ {0,4}timeout\s*=\s*([0-9.]+)\s*(?:#.*)?$/m) || [])[1];
+  if (fnTimeout !== undefined && Number(fnTimeout) > 10) {
+    errors.push(`netlify.toml sets [functions] timeout = ${fnTimeout}s — on the free (Starter) plan Netlify caps Functions at 10s and a higher value fails the deploy at config validation. Remove the key and keep each request short instead.`);
+  }
   if (!exists('netlify/functions/api.mjs')) warnings.push('netlify.toml redirects /api/* but netlify/functions/api.mjs is missing');
 }
 

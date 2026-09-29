@@ -14,10 +14,14 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
-  # Netlify kills functions at 26s no matter what; the agent runner therefore does
-  # ONE model call per request (plan / step / verify) instead of one long request.
-  # AI answers still need headroom, so the wrapper caps the provider call a little below this.
-  timeout = 26
+  # NOTE: no `timeout` key on purpose. Netlify caps Functions at 10 seconds on the free (Starter)
+  # plan, and setting `timeout = 26` here makes the *deploy fail during config validation* rather
+  # than just being ignored — learned the hard way on a real deploy. `timeout` only becomes usable
+  # on a paid plan (up to ~26-30s), and even then one AI answer can exceed it, so this project
+  # instead keeps every request short: the agent runs one phase per request, and api.mjs aborts the
+  # provider call at PROVIDER_TIMEOUT_MS (default 8000) so you get a readable message, not
+  # FUNCTION_TIMEOUT. Need longer answers? Put /api on a Cloudflare Worker (no wall-clock limit):
+  # CLOUDFLARE.md §D.
 
 # One function serves every API route; keep in sync with ROUTES in shared/api.js.
 [[redirects]]

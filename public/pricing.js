@@ -165,7 +165,8 @@
     // 2. Backend config. A 404/405 here means only static hosting is deployed.
     let cfg = null;
     try {
-      const r = await fetch('/api/paddle-config', { cache: 'no-store', headers: { Accept: 'application/json' } });
+      const api = (window.REALM_API && window.REALM_API.url) ? window.REALM_API.url('/api/paddle-config') : '/api/paddle-config';
+      const r = await fetch(api, { cache: 'no-store', headers: { Accept: 'application/json' } });
       const ct = r.headers.get('content-type') || '';
       // A 200 with HTML means static hosting answered instead of the API route.
       if (ct.indexOf('json') === -1) cfg = { error: '/api/paddle-config is not deployed on this origin (static hosting only).' };

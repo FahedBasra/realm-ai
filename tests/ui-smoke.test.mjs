@@ -203,6 +203,26 @@ check('legal modal renders text', (() => { window.showInfo('Privacy'); return (d
 check('login modal opens from the header button', (() => { document.getElementById('loginBtn').click(); return document.getElementById('loginModal').classList.contains('show'); })());
 check('no Paddle call was attempted with a sandbox token', openedCheckouts.length === 0);
 
+console.log('\nAPI base override (site on Netlify, API on another origin)');
+{
+  const src = fs.readFileSync(path.join(PUB, 'index.html'), 'utf8');
+  const withBase = src.replace('<meta name="realm:api" content="" />', '<meta name="realm:api" content="https://realm-ai.demo.workers.dev/" />');
+  check('index.html exposes the realm:api override', withBase !== src);
+  const probe = new JSDOM(withBase.replace(/<script src="\/(tiers|pricing)\.js"><\/script>/g, ''), {
+    url: 'https://realm.test/', runScripts: 'dangerously', pretendToBeVisual: true,
+    beforeParse(w) { w.fetch = async () => json({ ok: true, ai: { configured: true, model: 'm' }, billing: {}, version: 'v3', limits: {} }); w.scrollTo = () => {}; }
+  });
+  await new Promise((r) => (probe.window.onload = r));
+  check('the trailing slash is normalised away', probe.window.REALM_API.base === 'https://realm-ai.demo.workers.dev', probe.window.REALM_API.base);
+  check('API calls are absolute when a base is set', probe.window.REALM_API.url('/api/chat') === 'https://realm-ai.demo.workers.dev/api/chat');
+  const plain = new JSDOM(src.replace(/<script src="\/(tiers|pricing)\.js"><\/script>/g, ''), {
+    url: 'https://realm.test/', runScripts: 'dangerously', pretendToBeVisual: true,
+    beforeParse(w) { w.fetch = async () => json({ ok: true, ai: {}, billing: {}, version: 'v3', limits: {} }); w.scrollTo = () => {}; }
+  });
+  await new Promise((r) => (plain.window.onload = r));
+  check('default stays same-origin (nothing to configure for most setups)', plain.window.REALM_API.url('/api/chat') === '/api/chat', plain.window.REALM_API.url('/api/chat'));
+}
+
 console.log('\nagent runner UI (plan → steps → verify, driven by /api/agent)');
 {
   const a = await boot();

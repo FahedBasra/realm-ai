@@ -15,12 +15,17 @@
 <meta name="robots" content="index,follow" />
 <meta name="twitter:card" content="summary" />
 <meta name="twitter:title" content="Realm AI — AI Workspace" />
+<!-- Optional: point the app at an API hosted elsewhere (e.g. a Cloudflare Worker) while this file is
+     served by Netlify. Leave empty for same-origin. Add the site's origin to ALLOWED_ORIGINS there. -->
+<meta name="realm:api" content="" />
 <link rel="preconnect" href="https://cdn.paddle.com" crossorigin />
 <script src="https://cdn.paddle.com/paddle/v2/paddle.js" async></script>
 <script>/* Keep canonical + social URLs correct on whatever domain you deploy to; replaces the YOUR-DOMAIN placeholder at runtime. */
 (function(){var u=location.origin+location.pathname.replace(/index\.html$/,'');
 var c=document.querySelector('link[rel=canonical]');if(c&&/YOUR-DOMAIN/.test(c.href))c.href=u;
-document.querySelectorAll('meta[property="og:url"]').forEach(function(m){if(/YOUR-DOMAIN/.test(m.content))m.content=u});})();</script>
+document.querySelectorAll('meta[property="og:url"]').forEach(function(m){if(/YOUR-DOMAIN/.test(m.content))m.content=u});})();
+/* Realm AI API base: same-origin unless <meta name="realm:api"> (or window.REALM_API_BASE) says otherwise. */
+window.REALM_API=(function(){var m=document.querySelector('meta[name="realm:api"]');var b=String(window.REALM_API_BASE||(m&&m.content)||'').trim().replace(/\/+$/,'').replace(/\/api$/,'');return{base:b,url:function(p){return b?b+p:p}}})();</script>
 <title>Realm AI — AI Workspace</title>
 <style>
 :root{
@@ -271,7 +276,7 @@ const BACKEND_OFF='The AI backend is not connected yet. To test on your own comp
 async function callAI(messages){
   let res=null,d={},net=false,isJson=false;
   try{
-    res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({messages})});
+    res=await fetch(REALM_API.url('/api/chat'),{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({messages})});
     isJson=(res.headers.get('content-type')||'').indexOf('json')>-1;
     d=isJson?await res.json().catch(()=>({})):{error:'non-JSON response'};
   }catch(e){net=true}
@@ -332,7 +337,7 @@ function agentStatus(msg,kind){const el=agentEl('agentStatus');if(el){el.textCon
 window.stopAgent=function(){if(!agentRun)return;agentRun.cancelled=true;agentStatus('Stopping after the current step…')};
 window.copyAgentResult=function(){const t=(agentRun&&agentRun.final)||'';if(!t)return toast('Nothing to copy yet');navigator.clipboard?.writeText(t);toast('Result copied')};
 async function agentApi(body){
-  const r=await fetch('/api/agent',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body)});
+  const r=await fetch(REALM_API.url('/api/agent'),{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body)});
   const isJson=(r.headers.get('content-type')||'').indexOf('json')>-1;
   const d=isJson?await r.json().catch(()=>({})):{error:'non-JSON response'};
   if(!r.ok){const e=new Error(d.error||('Agent request failed (HTTP '+r.status+').'));e.code=d.code;throw e}
@@ -428,7 +433,7 @@ window.showInfo=function(k){let m=$('infoModal');if(!m){document.body.insertAdja
 
 /* Backend health strip: shows exactly which secrets Cloudflare has, so setup mistakes are visible instead of mysterious. */
 window.checkBackend=function(){const el=$('backendStatus');if(!el)return;el.textContent='Checking the AI backend…';
-fetch('/api/health',{cache:'no-store',headers:{Accept:'application/json'}}).then(r=>r.json().catch(()=>({}))).then(d=>{
+fetch(REALM_API.url('/api/health'),{cache:'no-store',headers:{Accept:'application/json'}}).then(r=>r.json().catch(()=>({}))).then(d=>{
   if(!d||d.ok!==true){el.textContent='No Realm AI backend detected on this origin. If you opened the file directly, run: npm run dev. If this is your deployed site, see TROUBLESHOOTING.md.';return}
   const ai=d.ai||{},b=d.billing||{};
   const aiTxt=ai.configured?('connected — '+(ai.model||'default model')):'GEMINI_API_KEY secret is missing — see README step 2';

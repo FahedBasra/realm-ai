@@ -60,7 +60,9 @@ identically, because all three hosts call the same `shared/api.js`:
 | Secrets | `npx wrangler secret put GEMINI_API_KEY` | Settings → Environment variables & Secrets → **redeploy** |
 
 One host must own the API: env vars are per-host, so if Netlify serves the pages and Cloudflare holds the
-key, the app correctly reports "backend is not connected".
+key, the app correctly reports "backend is not connected". If Netlify's 10-second function ceiling is too
+tight for long answers, keep the pages there and point the app at a Worker API instead:
+`<meta name="realm:api" content="https://realm-ai.<account>.workers.dev" />` (`CLOUDFLARE.md` §D).
 
 ## Verify it works
 
@@ -82,7 +84,7 @@ npm install
 cp .dev.vars.example .dev.vars     # put your Gemini key here; .dev.vars is gitignored
 npm run dev                        # Cloudflare Worker + static assets  → http://localhost:8787
 npm run dev:pages                  # Cloudflare Pages Functions variant → http://localhost:8788
-npm test                           # structure check + 50 API tests + 52 jsdom UI checks
+npm test                           # structure check + 51 API tests + 56 jsdom UI checks
 npm run dev:mock                   # no API key? chat + agent run against scripts/mock-gemini.mjs
 ```
 

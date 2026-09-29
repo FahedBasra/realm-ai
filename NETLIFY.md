@@ -63,22 +63,30 @@ Or open the site → **Settings**: the backend strip reads `/api/health` and nam
 Also worth enabling once: **Features → Functions → Inspect function logs** (or `netlify functions:serve`
 locally with the CLI) — the wrapper writes nothing sensitive there.
 
-## The 26-second ceiling, and why Agent mode doesn't hit it
+## The 10-second ceiling on the free plan (read this once)
 
-A Netlify Function is killed at 26 s. A single long AI answer can exceed that, and you would get an
-opaque `FUNCTION_TIMEOUT` instead of an answer. Two things handle it:
+Netlify caps a **Function** at 10 seconds on the free (Starter) plan; ~26-30s needs a paid plan, and
+setting `[functions] timeout = 26` in `netlify.toml` on a free site does not quietly get clamped —
+**the whole deploy fails at config validation** (that exact mistake cost one red build on this repo, so
+the key is deliberately absent and `npm run check` now refuses to let it come back).
 
-- `netlify/functions/api.mjs` passes `PROVIDER_TIMEOUT_MS=21000`, so Realm AI aborts the Gemini call
-  itself and replies *"the model took too long — ask something narrower"* (a real message in the UI)
-  instead of being killed.
-- **Agent mode is split into one request per step** (`/api/agent` with `phase: plan | step | verify`).
-  A 5-step job is 7 short requests with live progress in the UI, so total run time is unbounded while
-  each request stays comfortably under the limit. The same design also gives you Stop/partial results
-  for free, and works identically on Cloudflare (where there is no such ceiling).
+Realm AI is built so the ceiling rarely matters:
 
-If you want longer single answers (long code generations), either lower expectations per message, or move
-the API to Cloudflare Workers (`CLOUDFLARE.md` section A) — Workers bill on CPU, not wall-clock, so a
-60 s wait on the model costs nothing extra.
+- **Agent mode is one request per phase** (`plan` → each `step` → `verify`). A 5-step job is 7 short
+  requests with live progress in the UI, so the total run is unbounded while no single request gets near
+  10s. It also buys you Stop, per-step retry, and partial results kept on screen.
+- `netlify/functions/api.mjs` defaults `PROVIDER_TIMEOUT_MS=8000` and `GEMINI_MAX_TOKENS=700`, so a slow
+  answer ends as *"the model took too long — ask something narrower"* in the chat bubble rather than an
+  opaque `FUNCTION_TIMEOUT` in the browser console. A long code dump can genuinely need more than 700
+  tokens, so on Netlify keep messages focused and let the agent's step-by-step output be the long artifact.
+- Set `RATE_LIMIT_PER_MINUTE` too: a free-plan site is easy to hammer, and every chat message costs a
+  provider call.
+
+If you need long single answers (e.g. "write me a 400-line file") on a free plan, keep the **site** on
+Netlify and move the **API** to a Cloudflare Worker — Workers bill on CPU time, not wall-clock, so a
+45-second generation costs nothing extra and is free up to 100k requests/day. It's a 10-minute change and
+the app already supports it: set `REALM_API_BASE` / the `<meta name="realm:api">` tag to the Worker URL and
+add the Netlify origin to the Worker's `ALLOWED_ORIGINS`. Exact steps: `CLOUDFLARE.md` §D.
 
 ## Optional: local preview with the real runtime
 
