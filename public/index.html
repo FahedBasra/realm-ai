@@ -12,7 +12,15 @@
 <meta property="og:url" content="https://YOUR-DOMAIN/" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23101b35'/%3E%3Cpath d='M9 24V8h8c4 0 6 2 6 5s-2 5-5 5l5 6h-5l-4-5h-1v5z' fill='%2336b7ff'/%3E%3C/svg%3E" />
 <meta name="theme-color" content="#070b14" />
-<script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+<meta name="robots" content="index,follow" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Realm AI — AI Workspace" />
+<link rel="preconnect" href="https://cdn.paddle.com" crossorigin />
+<script src="https://cdn.paddle.com/paddle/v2/paddle.js" async></script>
+<script>/* Keep canonical + social URLs correct on whatever domain you deploy to; replaces the YOUR-DOMAIN placeholder at runtime. */
+(function(){var u=location.origin+location.pathname.replace(/index\.html$/,'');
+var c=document.querySelector('link[rel=canonical]');if(c&&/YOUR-DOMAIN/.test(c.href))c.href=u;
+document.querySelectorAll('meta[property="og:url"]').forEach(function(m){if(/YOUR-DOMAIN/.test(m.content))m.content=u});})();</script>
 <title>Realm AI — AI Workspace</title>
 <style>
 :root{
@@ -160,7 +168,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 
 <section class="view" id="pricingView"><div class="page"><div class="page-title"><div class="eyebrow"><i></i> Plans & billing</div><h1>Choose your Realm.</h1><p>Simple pricing. Upgrade any time and unlock more power.</p></div><div id="pricingRoot"></div><div style="text-align:center;margin-top:16px;font-size:12px;color:#91a0bb">Need a team plan? <a href="#" onclick="contactSales();return false" style="color:#8cbcff">Contact sales</a></div><div class="notice" style="margin-top:14px;text-align:center">Secure checkout by Paddle. Cancel any time. Prices shown in your local currency.</div></div></div></section>
 
-<section class="view" id="settingsView"><div class="page"><div class="page-title"><div class="eyebrow"><i></i> Settings</div><h1>Make Realm AI yours.</h1><p>Personalize your workspace.</p></div><div class="workspace"><div class="card workspace-main"><div class="stack"><label style="font-size:10px;color:#7f8ca5">Display name<input class="input" value="Guest" /></label><label style="font-size:10px;color:#7f8ca5">Assistant name<input class="input" value="Realm AI" /></label><label style="font-size:10px;color:#7f8ca5">Response style<select class="input"><option>Balanced</option><option>Concise</option><option>Detailed</option></select></label><button class="primary" onclick="savePrefs()">Save preferences</button></div></div><aside class="card workspace-side"><div class="side-card-title">Security</div><div class="check"><i></i><span>Keep API keys server-side</span></div><div class="check"><i></i><span>Authenticated file storage</span></div><div class="check"><i></i><span>Server-verified payments</span></div></aside></div></div></section>
+<section class="view" id="settingsView"><div class="page"><div class="page-title"><div class="eyebrow"><i></i> Settings</div><h1>Make Realm AI yours.</h1><p>Personalize your workspace.</p></div><div class="workspace"><div class="card workspace-main"><div class="stack"><label style="font-size:10px;color:#7f8ca5">Display name<input class="input" id="displayName" value="Guest" /></label><label style="font-size:10px;color:#7f8ca5">Assistant name<input class="input" id="assistantName" value="Realm AI" /></label><label style="font-size:10px;color:#7f8ca5">Response style<select class="input" id="respStyle"><option>Balanced</option><option>Concise</option><option>Detailed</option></select></label><button class="primary" onclick="savePrefs()">Save preferences</button></div></div><aside class="card workspace-side"><div class="side-card-title">Security</div><div class="check"><i></i><span>Keep API keys server-side</span></div><div class="check"><i></i><span>Authenticated file storage</span></div><div class="check"><i></i><span>Server-verified payments</span></div></aside></div></div></section>
 </main></div>
 
 <div class="modal" id="loginModal"><div class="modalbox"><div class="modalhead"><h3>Welcome to Realm AI</h3><button class="close" onclick="closeModal('loginModal')">×</button></div><p style="color:#73829d;font-size:11px">Sign in to sync your chats across devices and unlock Pro.</p><div class="stack"><input class="input" type="email" placeholder="Email address"><input class="input" type="password" placeholder="Password"><button class="primary" onclick="loginSoon()">Continue →</button></div></div></div>
@@ -199,7 +207,7 @@ window.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelecto
 'use strict';
 const $=id=>document.getElementById(id);
 const KEY='realm_chats_v2',SKEY='realm_settings_v1';
-let store={cur:null,chats:[]},settings={name:'Guest'},busy=false,attached=null;
+let store={cur:null,chats:[]},settings={name:'Guest',assistant:'Realm AI',style:'Balanced'},busy=false,attached=null;
 try{store=JSON.parse(localStorage.getItem(KEY))||store}catch(e){}
 try{settings=Object.assign(settings,JSON.parse(localStorage.getItem(SKEY)))}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(store))}catch(e){}};
@@ -231,25 +239,36 @@ function renderChat(){
 window.copyMsg=i=>{navigator.clipboard?.writeText(cur().messages[i].content);toast('Copied to clipboard')};
 document.addEventListener('click',e=>{const d=e.target.closest('[data-del]');if(d){store.chats=store.chats.filter(c=>c.id!==d.dataset.del);if(store.cur===d.dataset.del)store.cur=null;save();renderChat();e.stopPropagation();return}const t=e.target.closest('#chatList .chat-title[data-id]');if(t){store.cur=t.dataset.id;save();renderChat()}});
 
-const SYS='You are Realm AI, a helpful, friendly assistant. Reply in English unless the user writes in another language. Be clear and concise.';
+const STYLES={Balanced:'',Concise:'Keep answers short: no preamble, no filler.',Detailed:'Give a thorough answer with examples and edge cases.'};
+function sysPrompt(){const n=(settings.assistant||'Realm AI').replace(/[\r\n<]/g,'').slice(0,40);const st=STYLES[settings.style]||'';return 'You are '+n+', a helpful, friendly assistant. Reply in English unless the user writes in another language. Be clear and concise.'+(st?' '+st:'');}
 async function direct(messages,k){
-  const contents=messages.map(m=>({role:m.role==='user'?'user':'model',parts:[{text:m.content}]}));
+  const contents=messages.filter(m=>m.role!=='system').map(m=>({role:m.role==='user'?'user':'model',parts:[{text:m.content}]}));
   while(contents.length&&contents[0].role!=='user')contents.shift();
   const model=localStorage.getItem('realm_gemini_model')||'gemini-2.5-flash-lite';
-  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':k},body:JSON.stringify({systemInstruction:{parts:[{text:SYS}]},contents})});
+  const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':k},body:JSON.stringify({systemInstruction:{parts:[{text:sysPrompt()}]},contents,generationConfig:{temperature:.4,maxOutputTokens:2048}})});
   const d=await r.json().catch(()=>({}));
   if(!r.ok)throw new Error((d.error&&d.error.message)||'Gemini request failed. Check your API key and model name in Settings.');
-  return (d.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('')||'I could not generate a reply. Please try again.';
+  return (d.candidates?.[0]?.content?.parts||[]).filter(p=>!p.thought).map(p=>p.text||'').join('').trim()||'I could not generate a reply. Please try again.';
 }
+/* Talks to the Realm AI backend (/api/chat). Only if the backend is not configured yet
+   do we fall back to a key typed into Settings, which stays in this browser. */
+const BACKEND_OFF='The AI backend is not connected yet. To test on your own computer, open Settings and paste your Gemini API key. After you deploy on Cloudflare, it works automatically for everyone.';
 async function callAI(messages){
-  let r=null,d={};
-  try{r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages})});d=await r.json().catch(()=>({}))}catch(e){r=null}
-  if(r&&r.ok)return d.text;
-  const noBackend=!r||r.status===404||r.status===405||(r.status===500&&/not configured/i.test(d.error||''));
+  let res=null,d={},net=false,isJson=false;
+  try{
+    res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({messages})});
+    isJson=(res.headers.get('content-type')||'').indexOf('json')>-1;
+    d=isJson?await res.json().catch(()=>({})):{error:'non-JSON response'};
+  }catch(e){net=true}
+  if(res&&res.ok&&typeof d.text==='string')return d.text||'I could not generate a reply. Please try again.';
+  const status=res?res.status:0;
+  // status 200 + HTML body = the /api route is not deployed and static hosting answered instead.
+  const noBackend=net||status===404||status===405||(res&&res.ok&&!isJson)||d.code==='AI_NOT_CONFIGURED'||/not connected|not configured|Static assets binding/i.test(d.error||'');
   const k=localStorage.getItem('realm_gemini_key');
   if(noBackend&&k)return direct(messages,k);
-  if(noBackend)throw new Error('The AI backend is not connected yet. To test on your own computer, open Settings and paste your Gemini API key. After you deploy on Cloudflare, it works automatically for everyone.');
-  throw new Error(d.error||'Realm AI is temporarily unavailable. Please try again.');
+  if(noBackend)throw new Error(BACKEND_OFF);
+  if(status===429){const wait=Number(res.headers.get('retry-after')||0);throw new Error(d.error||('That was a bit fast. Try again in '+(wait||30)+' seconds.'))}
+  throw new Error(d.error||('Realm AI is temporarily unavailable (HTTP '+status+'). Please try again.'));
 }
 async function reveal(el,text,box){const w=text.split(/(\s+)/);let o='';for(let i=0;i<w.length;i++){o+=w[i];if(i%8===0||i===w.length-1){el.innerHTML=md(o);if(box)box.scrollTop=box.scrollHeight;await sleep(12)}}}
 
@@ -258,7 +277,7 @@ async function ask(text,regen){
   if(!regen){c.messages.push({role:'user',content:text});if(c.title==='New chat')c.title=text.slice(0,42)}
   save();renderChat();busy=true;$('send').disabled=true;
   const box=$('messages');box.insertAdjacentHTML('beforeend','<div class="msg" id="live"><div class="avatar">R</div><div class="bubble"><span class="typing"><i></i><i></i><i></i></span></div></div>');box.scrollTop=box.scrollHeight;
-  const payload=c.messages.slice(-12).map(m=>({role:m.role,content:m.content}));
+  const payload=[{role:'system',content:sysPrompt()}].concat(c.messages.slice(-12).map(m=>({role:m.role,content:m.content})));
   if(attached&&!regen){const l=payload[payload.length-1];l.content='[Attached file: '+attached.name+']\n'+attached.text+'\n\n'+l.content;attached=null;if($('fileList'))$('fileList').innerHTML=''}
   const bub=$('live').querySelector('.bubble');
   try{const reply=await callAI(payload);await reveal(bub,reply,box);c.messages.push({role:'assistant',content:reply});save()}
@@ -324,13 +343,22 @@ window.sendSales=function(){
 };
 
 /* Settings, login, legal */
-function applyName(){const n=settings.name||'Guest';document.querySelectorAll('.profile-name').forEach(x=>x.textContent=n);document.querySelectorAll('.profile .avatar,#loginBtn').forEach(x=>x.textContent=n[0].toUpperCase());const h=$('welcomeH');if(h)h.textContent=n==='Guest'?'Welcome back 👋':'Welcome back, '+n+' 👋';const i=$('settingsView').querySelector('input:not([type=password])');if(i)i.value=n}
-window.savePrefs=function(){try{const gk=$('gKey');if(gk){gk.value.trim()?localStorage.setItem('realm_gemini_key',gk.value.trim()):localStorage.removeItem('realm_gemini_key');$('gModel').value.trim()?localStorage.setItem('realm_gemini_model',$('gModel').value.trim()):localStorage.removeItem('realm_gemini_model')}}catch(e){}const i=$('settingsView').querySelector('input:not([type=password])');settings.name=(i.value||'Guest').trim().slice(0,30);try{localStorage.setItem(SKEY,JSON.stringify(settings))}catch(e){}applyName();toast('Preferences saved')};
+function applyName(){const n=settings.name||'Guest';document.querySelectorAll('.profile-name').forEach(x=>x.textContent=n);document.querySelectorAll('.profile .avatar,#loginBtn').forEach(x=>x.textContent=n[0].toUpperCase());const h=$('welcomeH');if(h)h.textContent=n==='Guest'?'Welcome back 👋':'Welcome back, '+n+' 👋';const dn=$('displayName');if(dn)dn.value=n;const an=$('assistantName');if(an&&!an.value)an.value=settings.assistant||'Realm AI';const rs=$('respStyle');if(rs)rs.value=settings.style||'Balanced'}
+window.savePrefs=function(){try{const gk=$('gKey'),gm=$('gModel');if(gk){gk.value.trim()?localStorage.setItem('realm_gemini_key',gk.value.trim()):localStorage.removeItem('realm_gemini_key')}if(gm){gm.value.trim()?localStorage.setItem('realm_gemini_model',gm.value.trim()):localStorage.removeItem('realm_gemini_model')}}catch(e){}const dn=$('displayName'),an=$('assistantName'),rs=$('respStyle');settings.name=(((dn&&dn.value)||'Guest').trim()||'Guest').slice(0,30);settings.assistant=(((an&&an.value)||'Realm AI').trim()||'Realm AI').slice(0,40);settings.style=(rs&&rs.value)||'Balanced';try{localStorage.setItem(SKEY,JSON.stringify(settings))}catch(e){}applyName();toast('Preferences saved')}
 window.loginSoon=()=>toast('Accounts are launching soon. Your chats are saved on this device.');
 const LEGAL={Privacy:'Your chats are stored in your own browser. Messages you send are processed by our AI provider to generate replies. Never share passwords, card numbers or other secrets in chat. We do not store payment card details.',Terms:'Realm AI can make mistakes, so please verify important information and do not rely on it for medical, legal or financial decisions. Paid plans are billed monthly through Paddle, our payment provider, and can be cancelled at any time.'};
 window.showInfo=function(k){let m=$('infoModal');if(!m){document.body.insertAdjacentHTML('beforeend','<div class="modal" id="infoModal"><div class="modalbox"><div class="modalhead"><h3 id="infoT"></h3><button class="close" onclick="closeModal(\'infoModal\')">×</button></div><p id="infoB" style="color:#9fb0cc;font-size:13px;line-height:1.6"></p></div></div>');m=$('infoModal')}$('infoT').textContent=k;$('infoB').textContent=LEGAL[k];openModal('infoModal')};
 
-document.addEventListener('DOMContentLoaded',()=>{const st=document.querySelector('#settingsView .stack');if(st)st.insertAdjacentHTML('afterbegin','<label style="font-size:10px;color:#7f8ca5">Gemini API key (for testing on your computer only)<input class="input" id="gKey" type="password" placeholder="Paste key from aistudio.google.com" /></label><label style="font-size:10px;color:#7f8ca5">Gemini model (optional)<input class="input" id="gModel" placeholder="gemini-2.5-flash-lite" /></label>');const gk=$('gKey');if(gk){gk.value=localStorage.getItem('realm_gemini_key')||'';$('gModel').value=localStorage.getItem('realm_gemini_model')||''}applyName();renderChat();const p=$('prompt');p.addEventListener('input',()=>{p.style.height='auto';p.style.height=Math.min(p.scrollHeight,180)+'px'})});
+/* Backend health strip: shows exactly which secrets Cloudflare has, so setup mistakes are visible instead of mysterious. */
+window.checkBackend=function(){const el=$('backendStatus');if(!el)return;el.textContent='Checking the AI backend…';
+fetch('/api/health',{cache:'no-store',headers:{Accept:'application/json'}}).then(r=>r.json().catch(()=>({}))).then(d=>{
+  if(!d||d.ok!==true){el.textContent='No Realm AI backend detected on this origin. If you opened the file directly, run: npm run dev. If this is your deployed site, see TROUBLESHOOTING.md.';return}
+  const ai=d.ai||{},b=d.billing||{};
+  const aiTxt=ai.configured?('connected — '+(ai.model||'default model')):'GEMINI_API_KEY secret is missing — see README step 2';
+  const billTxt=b.paddleConfigured?('Paddle '+b.environment+(b.tokenMatchesEnv?'':' — token does not match PADDLE_ENV')):(b.webhookConfigured?'Paddle partly configured':'Paddle not configured — showing preview prices');
+  el.innerHTML='<div><b>AI:</b> '+esc(aiTxt)+'</div><div><b>Billing:</b> '+esc(billTxt)+'</div><div><b>API:</b> realm-ai '+esc(d.version||'')+' · '+esc(String(d.limits&&d.limits.requestsPerMinute))+' req/min</div>';
+}).catch(()=>{el.textContent='Could not reach /api/health on this origin (static hosting only?). Use Settings → API key for local testing, or deploy the Worker/Pages Functions for everyone.'})};
+document.addEventListener('DOMContentLoaded',()=>{const st=document.querySelector('#settingsView .stack');if(st)st.insertAdjacentHTML('afterbegin','<div class="notice" id="backendStatus" style="font-size:11px;line-height:1.6">Checking the AI backend…</div><button class="toolbtn" style="align-self:flex-start" onclick="checkBackend()">Re-check backend</button><label style="font-size:10px;color:#7f8ca5">Gemini API key (only for testing in your own browser — leave empty once the backend is deployed)<input class="input" id="gKey" type="password" placeholder="Paste key from aistudio.google.com" autocomplete="off" /></label><label style="font-size:10px;color:#7f8ca5">Gemini model (optional)<input class="input" id="gModel" placeholder="gemini-2.5-flash-lite" autocomplete="off" /></label>');const gk=$('gKey');if(gk){gk.value=localStorage.getItem('realm_gemini_key')||'';$('gModel').value=localStorage.getItem('realm_gemini_model')||''}applyName();renderChat();checkBackend();const p=$('prompt');p.addEventListener('input',()=>{p.style.height='auto';p.style.height=Math.min(p.scrollHeight,180)+'px'})});
 })();
 
 

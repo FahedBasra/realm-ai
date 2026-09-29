@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Structure, syntax & bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dev tooling
+        run: npm ci --no-audit --no-fund
+
+      - name: Structure check + API logic tests + jsdom UI test
+        run: npm test
+
+      - name: Validate Wrangler config and bundle the Worker (no deploy)
+        run: npx wrangler deploy --dry-run
+
+      - name: Verify the static site is publishable
+        run: |
+          test -f public/index.html
+          test -f public/tiers.js
+          test -f public/pricing.js
+          grep -q 'src="/tiers.js"' public/index.html

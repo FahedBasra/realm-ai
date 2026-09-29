@@ -1,0 +1,11 @@
+# Realm AI — robots.txt
+# Replace YOUR-DOMAIN below (and in sitemap.xml) with your live domain,
+# e.g. https://realm.ai — `npm run check` reminds you until you do.
+# API routes are never crawlable because /api/* is disallowed below.
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /welcome.html
+
+Sitemap: https://YOUR-DOMAIN/sitemap.xml

@@ -1,0 +1,31 @@
+{
+  "name": "realm-ai",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Realm AI — static frontend + Cloudflare Worker (Gemini chat, Paddle pricing, payment webhooks).",
+  "type": "module",
+  "engines": {
+    "node": ">=18.14.1"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:pages": "wrangler pages dev public --compatibility-date=2026-09-01",
+    "check": "node scripts/check.mjs",
+    "deploy": "wrangler deploy",
+    "deploy:pages": "wrangler pages deploy public",
+    "secret:ai": "wrangler secret put GEMINI_API_KEY",
+    "dry-run": "wrangler deploy --dry-run",
+    "test": "node scripts/check.mjs && node tests/realm-api.test.mjs && node tests/ui-smoke.test.mjs",
+    "test:ui": "node tests/ui-smoke.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FahedBasra/realm-ai.git"
+  },
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260929.1",
+    "jsdom": "^30.1.1",
+    "wrangler": "^4.143.1"
+  }
+}

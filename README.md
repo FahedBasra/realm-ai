@@ -1,20 +1,99 @@
-# Realm AI: setup guide
+# Realm AI
 
-## 1. AI backend (Gemini)
-1. Create an API key at aistudio.google.com
-2. Upload every file in this folder to a GitHub repo (keep the functions/ folder)
-3. Cloudflare Pages > Create project > Connect to Git. Build command: none. Output directory: /
-4. Settings > Variables and Secrets: add GEMINI_API_KEY (as a Secret). Optional: GEMINI_MODEL
-5. Redeploy
+[![CI](https://github.com/FahedBasra/realm-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/FahedBasra/realm-ai/actions/workflows/ci.yml)
 
-## 2. Payments (Paddle only)
-1. Create a sandbox account at sandbox-login.paddle.com
-2. Catalog > create 3 products with monthly recurring prices: Starter $5, Pro $15, Ultimate $25. Copy each price ID (pri_...)
-3. Developer tools > Authentication > create a client-side token (starts with test_)
-4. In index.html edit PADDLE={...}: paste the token and the 3 price IDs. Keep env:'sandbox' while testing
-5. Add your site domain in Paddle > Checkout > Website approval if the checkout does not open
-6. To go live: create a live Paddle account, then set env:'live' and use the live token and price IDs
-7. In index.html edit SALES={email:''} with the address that should receive Enterprise enquiries
+A production-shaped AI assistant: one static frontend (chat, agents, files, code, images, voice) plus a
+small Cloudflare backend that talks to Gemini, serves Paddle pricing and verifies payment webhooks.
 
-## 3. Search visibility
-Replace YOUR-DOMAIN in index.html, robots.txt and sitemap.xml with your live address, then add the site to Google Search Console and submit sitemap.xml.
+Your API keys never enter the browser. Everything the page needs comes from `/api/*`.
+
+```
+public/            what visitors download (this is the deploy directory)
+  index.html        the whole app UI
+  tiers.js          ← EDIT THIS: plan names, features, Paddle price IDs
+  pricing.js        renders plans, opens Paddle Checkout
+  welcome.html      post-payment landing page
+  robots.txt sitemap.xml _headers 404.html
+shared/api.js      ← ALL backend logic (chat, pricing config, webhook, health, limits)
+worker/index.js    Cloudflare Worker entry (serves /api/*, then public/ as static assets)
+functions/api/*    Cloudflare Pages Functions (same shared/api.js, same behaviour)
+wrangler.json      Worker config (assets dir, run_worker_first, compat date)
+supabase/schema.sql  accounts + chat storage + payment events (RLS enabled)
+tests/             npm test — API logic tests + a jsdom boot test of the real page
+scripts/check.mjs  npm run check — deploy-breakage guard (CI runs both)
+```
+
+## Deploy on Cloudflare (10 minutes)
+
+Pick **one** of the two. Both behave identically because they share `shared/api.js`.
+
+| | A · Cloudflare Workers (recommended) | B · Cloudflare Pages |
+|---|---|---|
+| Command | `npx wrangler login && npm run deploy` | Cloudflare dashboard → Workers & Pages → Create → Pages → connect this repo |
+| Build command | none needed | `exit 0` |
+| Build output directory | n/a (`wrangler.json` says `./public`) | **`public`** — not `/`, not `.` |
+| API routes | `worker/index.js` | `functions/api/*.js` (auto-detected) |
+| Secrets | `npx wrangler secret put NAME` | Pages → Settings → Variables and Secrets → Add |
+
+Then add the AI key — this is the only secret you *need*:
+
+```bash
+npx wrangler secret put GEMINI_API_KEY     # from https://aistudio.google.com/apikey
+# optional: npx wrangler secret put GEMINI_MODEL   (default gemini-2.5-flash-lite)
+```
+
+For Pages, add the same value in **Settings → Variables and Secrets → Secrets**, then **redeploy**
+(secrets are read at build/deploy time; changing one without redeploying changes nothing).
+
+Full click-by-click instructions, custom domain, and the Pages-specific gotchas: [CLOUDFLARE.md](CLOUDFLARE.md).
+
+## Verify it works
+
+```bash
+curl https://YOUR-SITE/                       # → the Realm AI HTML, not a 404
+curl https://YOUR-SITE/api/health             # → "ai":{"configured":true,...}
+curl -X POST https://YOUR-SITE/api/chat \
+  -H 'content-type: application/json' \
+  -d '{"messages":[{"role":"user","content":"Say OK"}]}'
+```
+
+Or open the site → **Settings**: the "Backend" strip reads `/api/health` and tells you exactly which
+secret is missing (AI connected/not, Paddle environment, token match, rate limit). No more guessing.
+
+## Local development
+
+```bash
+npm install
+cp .dev.vars.example .dev.vars     # put your Gemini key here; .dev.vars is gitignored
+npm run dev                        # Worker + static assets  → http://localhost:8787
+npm run dev:pages                  # Pages Functions variant → http://localhost:8788
+npm test                           # structure check + 31 API tests + 32 jsdom UI checks
+```
+
+## Secrets / env reference
+
+Set in Cloudflare (Workers: `wrangler secret put`, Pages: Variables and Secrets). Details in [CLOUDFLARE.md](CLOUDFLARE.md#secrets).
+
+| Name | Required | Purpose |
+|---|---|---|
+| `GEMINI_API_KEY` | yes for chat | server-side Gemini key |
+| `GEMINI_MODEL` | no | default `gemini-2.5-flash-lite` |
+| `GEMINI_MODEL_FALLBACK` | no | retried once if the model name is wrong/unavailable |
+| `GEMINI_TEMPERATURE` `GEMINI_MAX_TOKENS` `GEMINI_THINKING_BUDGET` | no | generation tuning |
+| `PADDLE_ENV` `PADDLE_CLIENT_TOKEN` | only for billing | `sandbox`/`production` + `test_…`/`live_…` token |
+| `PADDLE_WEBHOOK_SECRET` | only for webhooks | verifies `POST /api/paddle/webhook` |
+| `SUPABASE_URL` `SUPABASE_SERVICE_ROLE_KEY` | no | journals payment events (needs `supabase/schema.sql`) |
+| `RATE_LIMIT_PER_MINUTE` | no | default `20` per visitor per minute; `0` disables |
+| `ALLOWED_ORIGINS` | no | only if another site calls this API (comma-separated) |
+
+## Billing (optional, Paddle)
+
+See [PADDLE.md](PADDLE.md). Short version: put your price IDs in `public/tiers.js`, set `PADDLE_ENV` +
+`PADDLE_CLIENT_TOKEN`, point a Paddle notification at `https://YOUR-SITE/api/paddle/webhook`.
+Until then the pricing page shows preview plans instead of an error — on purpose.
+
+## Before you tell Google about the site
+
+`public/sitemap.xml`, `public/robots.txt` and the page canonical still contain `YOUR-DOMAIN`.
+Replace it with your live domain (`npm run check` reminds you until you do). Canonical/og:url are also
+fixed automatically at runtime from `location.origin`, so social previews work even before you edit them.

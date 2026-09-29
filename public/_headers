@@ -1,0 +1,28 @@
+/*
+  # Security headers for every response (Cloudflare Pages + Workers static assets both read this file).
+  #
+  # Two deliberate omissions, because they break a product like this one:
+  #  - no X-Frame-Options / frame-ancestors: preview environments, hosted docs and any page that
+  #    embeds this app in an <iframe> would go blank. Re-add it once you have logged-in pages worth
+  #    clickjacking, e.g.  X-Frame-Options: DENY
+  #  - no Content-Security-Policy: Paddle Checkout + the image studio need third-party origins and a
+  #    wrong CSP silently kills payments. Start from this once billing is live:
+  #    Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.paddle.com; style-src 'self' 'unsafe-inline'; frame-src https://cdn.paddle.com https://sandbox-checkout.paddle.com https://checkout.paddle.com; img-src 'self' data: blob: https://image.pollinations.ai; connect-src 'self'; base-uri 'self'; form-action 'self'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  # same-origin-allow-popups: Paddle may open a popup; strict same-origin would strand it.
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Permissions-Policy: camera=(), geolocation=(), payment=(self), microphone=(self)
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+/tiers.js
+  Cache-Control: public, max-age=0, must-revalidate
+/pricing.js
+  Cache-Control: public, max-age=0, must-revalidate
+/sitemap.xml
+  Content-Type: application/xml; charset=utf-8
+  Cache-Control: public, max-age=3600
+/robots.txt
+  Cache-Control: public, max-age=3600

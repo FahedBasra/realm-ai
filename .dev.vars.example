@@ -1,0 +1,25 @@
+# Copy to `.dev.vars` for local development (npm run dev). `.dev.vars` is gitignored.
+# On Cloudflare these are project *secrets* (Pages → Settings → Variables and Secrets,
+# or `npx wrangler secret put NAME`) — never put real values in wrangler.json or any file
+# under public/, because the browser can read them.
+
+# --- AI (required for /api/chat) ---
+GEMINI_API_KEY=your-key-from-aistudio.google.com
+GEMINI_MODEL=gemini-2.5-flash-lite
+# GEMINI_MODEL_FALLBACK=gemini-2.5-flash
+# GEMINI_TEMPERATURE=0.4
+# GEMINI_MAX_TOKENS=2048
+# GEMINI_THINKING_BUDGET=0
+
+# --- Billing / Paddle (optional; pricing stays in preview mode without these) ---
+# PADDLE_ENV=sandbox            # sandbox | production
+# PADDLE_CLIENT_TOKEN=test_xxx  # must start with test_ when PADDLE_ENV=sandbox, live_ when production
+# PADDLE_WEBHOOK_SECRET=trl_... # Paddle > Developer tools > Notifications > signing secret
+
+# --- Supabase (optional; webhook event journal) ---
+# SUPABASE_URL=https://xxxx.supabase.co
+# SUPABASE_SERVICE_ROLE_KEY=eyJ...
+
+# --- Hardening ---
+# RATE_LIMIT_PER_MINUTE=20      # 0 disables
+# ALLOWED_ORIGINS=https://realm.ai,https://www.realm.ai
