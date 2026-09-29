@@ -10,6 +10,7 @@ GEMINI_MODEL=gemini-2.5-flash-lite
 # GEMINI_TEMPERATURE=0.4
 # GEMINI_MAX_TOKENS=2048
 # GEMINI_THINKING_BUDGET=0
+# PROVIDER_TIMEOUT_MS=55000     # Netlify's wrapper defaults this to 21000 (26s function ceiling)
 
 # --- Billing / Paddle (optional; pricing stays in preview mode without these) ---
 # PADDLE_ENV=sandbox            # sandbox | production

@@ -29,6 +29,8 @@ const json = (obj, status = 200) => ({
 
 const openedCheckouts = [];
 const calls = [];
+const agentCalls = [];
+let agentMode = 'ok';
 
 function makeFetch({ aiConfigured = true } = {}) {
   return async function fetchStub(url, opts = {}) {
@@ -41,6 +43,18 @@ function makeFetch({ aiConfigured = true } = {}) {
         billing: { paddleConfigured: false, environment: null, tokenMatchesEnv: false, webhookConfigured: false, eventLogConfigured: false },
         limits: { requestsPerMinute: 20 }
       });
+    }
+    if (u.includes('/api/agent')) {
+      if (agentMode === 'off') return json({ error: 'AI is not connected yet.', code: 'AI_NOT_CONFIGURED' }, 503);
+      const body = opts.body ? JSON.parse(opts.body) : {};
+      agentCalls.push(body.phase);
+      if (body.phase === 'plan') return json({ phase: 'plan', deliverable: 'A study plan', missing: '', steps: [{ id: 0, title: 'Collect constraints', detail: 'what matters' }, { id: 1, title: 'Draft the week', detail: 'day by day' }, { id: 2, title: 'Check gaps', detail: 'list what is missing' }] });
+      if (body.phase === 'step') {
+        if (agentMode === 'slowstep' && body.stepIndex === 1) return json({ error: 'Step failed upstream.', code: 'PROVIDER_ERROR' }, 502);
+        if (agentMode === 'cancel') await new Promise((r) => setTimeout(r, 120));
+        return json({ phase: 'step', index: body.stepIndex, output: 'Output for step ' + (Number(body.stepIndex) + 1) + ': ' + (body.steps[body.stepIndex]?.title || '') });
+      }
+      return json({ phase: 'verify', verdict: 'complete', gaps: [], final: '# Study plan\n\nDay 1: revise.\n\n**Verified against the goal.**' });
     }
     if (u.includes('/api/paddle-config')) return json({ error: 'Billing is not configured yet. Set PADDLE_ENV and PADDLE_CLIENT_TOKEN as secrets.', code: 'PADDLE_NOT_CONFIGURED' }, 503);
     if (u.includes('/api/chat')) return json({ error: 'AI is not connected yet. Add GEMINI_API_KEY as a secret in Cloudflare and redeploy.', code: 'AI_NOT_CONFIGURED' }, 503);
@@ -188,6 +202,74 @@ check('contact sales opens a real form', (() => { window.contactSales(); return 
 check('legal modal renders text', (() => { window.showInfo('Privacy'); return (document.getElementById('infoB').textContent || '').length > 40; })());
 check('login modal opens from the header button', (() => { document.getElementById('loginBtn').click(); return document.getElementById('loginModal').classList.contains('show'); })());
 check('no Paddle call was attempted with a sandbox token', openedCheckouts.length === 0);
+
+console.log('\nagent runner UI (plan → steps → verify, driven by /api/agent)');
+{
+  const a = await boot();
+  const w = a.window, d = a.document;
+  d.getElementById('agentTask').value = 'Make me a 5-day study plan for finals';
+  d.getElementById('agentContext').value = 'I can study 2 hours a day.';
+  agentCalls.length = 0; agentMode = 'ok';
+  const callsStart = calls.length;
+  w.runAgent();
+  const finished = await waitFor(() => /Day 1: revise/.test(d.getElementById('agentResult').textContent));
+  check('the run finishes and renders the verified result', finished, d.getElementById('agentStatus').textContent);
+  check('every step is requested exactly once, in order', JSON.stringify(agentCalls) === '["plan","step","step","step","verify"]', JSON.stringify(agentCalls));
+  const cards = [...d.querySelectorAll('#agentSteps .agent-step')];
+  check('three step cards are rendered', cards.length === 3, String(cards.length));
+  check('all steps end in the done state', cards.every((c) => /\bdone\b/.test(c.className)), cards.map((c) => c.className).join('|'));
+  check('each step shows its own output under it', cards.every((c) => /Output for step/.test(c.textContent)));
+  check('step titles from the plan are visible', /Collect constraints/.test(d.getElementById('agentSteps').textContent));
+  check('status reports a verified run', /verified against the goal/i.test(d.getElementById('agentStatus').textContent), d.getElementById('agentStatus').textContent);
+  check('copy button appears only with a result', d.getElementById('agentCopy').style.display === '');
+  check('the run timer is cleared', d.getElementById('agentTimer').textContent === '');
+  {
+    const runCalls = calls.slice(callsStart);
+    const planCall = runCalls.filter((c) => /\/api\/agent/.test(c.url) && JSON.parse(c.body).phase === 'plan').pop();
+    const planBody = JSON.parse(planCall.body);
+    check('the goal + extra context are sent to the planner', /5-day study plan/.test(planBody.goal) && /2 hours a day/.test(planBody.context), JSON.stringify(planBody));
+    check('the agent view does not call /api/chat', !runCalls.some((c) => /\/api\/chat/.test(c.url)), JSON.stringify(runCalls.map((c) => c.url)));
+  }
+  check("markdown in the final answer is rendered as HTML (app's own md())", /<h4>Study plan<\/h4>/.test(d.getElementById('agentResult').innerHTML) && /<b>Verified against the goal\.<\/b>/.test(d.getElementById('agentResult').innerHTML), d.getElementById('agentResult').innerHTML.slice(0, 120));
+  check('agent UI boots without page errors', a.problems.length === 0, a.problems.join(' | '));
+
+  // a mid-run failure must leave the plan on screen and name the failing step
+  const b = await boot();
+  agentMode = 'slowstep';
+  b.document.getElementById('agentTask').value = 'another goal';
+  b.window.runAgent();
+  const failed = await waitFor(() => /Step 2 failed/i.test(b.document.getElementById('agentStatus').textContent));
+  check('a failed step is reported with its number', failed, b.document.getElementById('agentStatus').textContent);
+  check('the failing step is marked, the finished one stays done', (() => {
+    const cls = [...b.document.querySelectorAll('#agentSteps .agent-step')].map((c) => (c.className.match(/done|fail|run/) || ['wait'])[0]);
+    return cls[0] === 'done' && cls[1] === 'fail';
+  })(), [...b.document.querySelectorAll('#agentSteps .agent-step')].map((c) => c.className).join('|'));
+  check('no verify call is made after a failure', !agentCalls.includes('verify') || agentCalls.lastIndexOf('verify') < agentCalls.lastIndexOf('step'), JSON.stringify(agentCalls));
+  agentMode = 'ok';
+
+  // stop button
+  const c2 = await boot();
+  agentMode = 'cancel';
+  c2.document.getElementById('agentTask').value = 'long goal';
+  const stopPromise = c2.window.runAgent();
+  await waitFor(() => c2.document.querySelectorAll('#agentSteps .agent-step').length === 3);
+  c2.window.stopAgent();
+  await stopPromise;
+  check('Stop halts the run after the current step', /Stopped after/i.test(c2.document.getElementById('agentStatus').textContent), c2.document.getElementById('agentStatus').textContent);
+  check('stopping keeps partial results visible', /Output for step/.test(c2.document.getElementById('agentSteps').textContent));
+  agentMode = 'ok';
+
+  // backend not configured → actionable message, not a stack trace
+  const e2 = await boot();
+  agentMode = 'off';
+  const originalFetch = e2.window.fetch;
+  e2.window.fetch = async (u, o) => (String(u).includes('/api/agent') ? json({ error: 'AI is not connected yet.', code: 'AI_NOT_CONFIGURED' }, 503) : originalFetch(u, o));
+  e2.document.getElementById('agentTask').value = 'goal';
+  await e2.window.runAgent();
+  check('without a backend the agent explains what to do', /not connected yet/i.test(e2.document.getElementById('agentStatus').textContent), e2.document.getElementById('agentStatus').textContent);
+  check('and offers a direct link to Settings', /Open Settings/.test(e2.document.getElementById('agentResult').innerHTML), e2.document.getElementById('agentResult').innerHTML);
+  agentMode = 'ok';
+}
 
 if (failures.length) {
   console.error(`\n${failures.length} UI check(s) failed:\n  - ${failures.join('\n  - ')}`);

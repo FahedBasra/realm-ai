@@ -62,6 +62,17 @@ If `/api/health` answers, the API plumbing is fine and the problem is a secret/v
 | Worker logs full of `Unable to fetch the Request.cf object` | Local dev without network access to Cloudflare | Harmless; only affects `request.cf.country` (Paddle then auto-detects) |
 | `npx wrangler deploy` asks to create the worker / errors 10089 | No `CLOUDFLARE_API_TOKEN` or not logged in | `npx wrangler login`, or set the token in CI |
 
+## Agent mode
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Agent says "The AI backend is not connected yet" | same single secret as chat (`GEMINI_API_KEY`) on the host serving the page | `curl -s https://SITE/api/health` — `ai.configured` decides everything here |
+| A step fails and says `Step 2 failed: …` | that one model call errored (quota, timeout, blocked) | earlier steps are kept on screen; press Run again — the plan is re-made, but you can also just retry by re-running |
+| `FUNCTION_TIMEOUT` in Netlify logs instead of a message in the UI | a single request outlived 26 s | don't merge the phases back into one call; keep `PROVIDER_TIMEOUT_MS` (default 21000 on Netlify) below the ceiling |
+| Plan step cards stay on "Checking the result against the goal…" | the verify call is the longest one (it re-reads every step) | expected on long runs; shorten the goal, or lower `GEMINI_MAX_TOKENS` |
+| Plan text appears as one blob with a "fallback" note | the model returned prose instead of JSON | harmless: `parseJsonObject` recovers prose into one usable step; set `GEMINI_MODEL` to a stronger model if you want real multi-step plans |
+| Stop does nothing mid-request | Stop applies after the current step (the request can't be cancelled safely server-side) | by design — you keep the results of finished steps |
+
 ## Netlify (if that host is still in use)
 
 | Symptom | Cause | Fix |
@@ -74,6 +85,7 @@ If `/api/health` answers, the API plumbing is fine and the problem is a secret/v
 ## Still stuck?
 
 ```bash
+npm run dev:mock       # no key needed: chat + agent against a local mock provider (:8787)
 npm run dev            # Worker + assets on :8787, same code as production
 npm run dev:pages      # Pages Functions variant on :8788
 npm test               # 31 logic tests for the API layer

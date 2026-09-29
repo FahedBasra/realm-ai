@@ -11,6 +11,7 @@ database schema is ready to paste into Supabase. What's left is product work, in
   run the same code and are tested locally (`npm run dev`, `npm run dev:pages`).
 - Server-side AI: Gemini call in the Worker, key from secrets only, request/response caps, provider error
   mapping, optional per-IP rate limiting, model fallback, safety-block and truncation handled as messages.
+- Agent runner: `/api/agent` phases (plan/step/verify) with progress UI, Stop, retry, JSON-mode plans
 - Frontend resilience: the UI no longer dies when `/api/*` is missing (it says what's missing), no longer
   cross-wires the Settings fields (display name used to overwrite the Gemini model input, which then made
   every direct-key test fail with a bogus model name), and Pricing renders preview plans when Paddle is unset.
@@ -51,11 +52,21 @@ route in `shared/api.js`), with type + size limits and a virus scan where availa
 binaries to the model. PDF/DOCX extraction is a Worker dependency (`pdf-parse`, `mammoth`) — Workers support
 npm packages, keep it out of the browser.
 
-## Sprint E · agents
+## Sprint E · agents — server-side runner DONE, tools next
 
-`runAgent` currently sends one long instruction and prints the result. A real runner needs a server-side
-loop: plan → step → tool call → verify → final answer, with a persisted step log (add `agent_runs`,
-`agent_steps` tables) and an allowlist of tools. Keep tool execution in the Worker, never in the page.
+`/api/agent` now runs plan → each step → verify **on the server**, one model call per phase
+(`shared/api.js`, `agentPrompt()`), with capped steps (6), per-step output truncation, JSON-mode planning,
+tolerant JSON parsing, live progress/Stop/retry in the UI, and the same auth + rate limits as chat.
+This replaced the old single-prompt `runAgent`, which had no plan, no verification and no progress.
+
+Still open, in order of value:
+1. **Tool allowlist**: give the plan a `tool` field per step (`search`, `calc`, `extract_from_file`) and
+   execute approved tools inside the step phase, then `verify` the tool output. Keep execution in
+   `shared/api.js` — never in the page.
+2. **Persistence**: `agent_runs` / `agent_steps` tables in `supabase/schema.sql`, so a run survives a reload
+   and can be resumed at the failed step (the client currently holds the transcript between phases, which is
+   enough without accounts but loses work on refresh).
+3. **Real budget**: count `usage.agent_runs` per user once Sprint B lands.
 
 ## Sprint F · local payments (Pakistan)
 
@@ -69,6 +80,7 @@ easier global option; don't run both for the same plan.
 
 - [ ] `/api/health` green on the production URL, `ai.configured:true`, `billing.paddleConfigured:true`
 - [ ] `npm run check` has zero warnings (domain + price IDs set)
+- [ ] Agent mode: run a 3-step goal end to end on the deployed URL and confirm Stop + retry-a-step work
 - [ ] Paddle **live** catalog, website approval, live webhook secret, `PADDLE_ENV=production`
 - [ ] `RATE_LIMIT_KV` bound; abuse reviewed via `npx wrangler tail`
 - [ ] Mobile: upload limits, keyboard on chat input, voice fallback toast

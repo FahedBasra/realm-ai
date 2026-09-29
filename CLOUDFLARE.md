@@ -86,10 +86,12 @@ Notes that trip people up on Pages:
   two deployments pointing at one repo is how people end up "fixing" the wrong one.
 - Local equivalent of the Pages deploy: `npm run dev:pages` (uses the same `functions/` files).
 
-## C · You also have a Netlify site (`reralm-ai`)
+## C · Your repo is also (currently, primarily) on Netlify
 
-The repository is connected to Netlify as well, which is how two hosts end up serving one repo and only
-one of them gets the secrets. Two rules make that safe:
+Netlify is the host this project ships on right now — see **[NETLIFY.md](NETLIFY.md)** for setup, the
+env-var table and the two dashboard settings to fix. The repository being connected to two hosts is how
+only one of them ends up with the secrets, which is what "the AI backend is not connected" usually means.
+Two rules make the split safe:
 
 - `netlify.toml` (committed) pins `publish = "public"` and `command = "npm run check"`, so a stale
   dashboard setting can no longer publish the wrong directory — that misconfiguration is exactly what made

@@ -3,7 +3,8 @@
 [![CI](https://github.com/FahedBasra/realm-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/FahedBasra/realm-ai/actions/workflows/ci.yml)
 
 A production-shaped AI assistant: one static frontend (chat, agents, files, code, images, voice) plus a
-small Cloudflare backend that talks to Gemini, serves Paddle pricing and verifies payment webhooks.
+small serverless backend that talks to Gemini, runs Agent mode step by step, serves Paddle pricing and
+verifies payment webhooks.
 
 Your API keys never enter the browser. Everything the page needs comes from `/api/*`.
 
@@ -14,42 +15,52 @@ public/            what visitors download (this is the deploy directory)
   pricing.js        renders plans, opens Paddle Checkout
   welcome.html      post-payment landing page
   robots.txt sitemap.xml _headers 404.html
-shared/api.js      ← ALL backend logic (chat, pricing config, webhook, health, limits)
+shared/api.js      ← ALL backend logic (chat, agent, pricing config, webhook, health, limits)
+netlify/           Netlify Function wrapper + netlify.toml (current host)
 worker/index.js    Cloudflare Worker entry (serves /api/*, then public/ as static assets)
 functions/api/*    Cloudflare Pages Functions (same shared/api.js, same behaviour)
-netlify/*          optional Netlify mirror (netlify.toml + one function); Cloudflare is the main host
-wrangler.json      Worker config (assets dir, run_worker_first, compat date)
 supabase/schema.sql  accounts + chat storage + payment events (RLS enabled)
-tests/             npm test — API logic tests + a jsdom boot test of the real page
+tests/             npm test — 50 API/agent tests + 52 jsdom UI checks of the real page
 scripts/check.mjs  npm run check — deploy-breakage guard (CI runs both)
 ```
 
-## Deploy on Cloudflare (10 minutes)
+## What is actually wired
 
-Pick **one** of the two — both behave identically because they share `shared/api.js`.
-(Heads-up: this repo is *also* wired to a Netlify site called `reralm-ai`. If you keep that, `netlify.toml`
-now pins its publish dir to `public` and serves the same API, but set the secrets on whichever host
-actually serves your visitors — `A` or `B` — or the app will say "backend not connected" on the other one.)
+| Feature | State |
+|---|---|
+| Chat | ✅ real — `POST /api/chat` → Gemini, key on the server, history size/length capped, provider errors explained in the UI |
+| Agent mode | ✅ real — `POST /api/agent`, one model call per phase (`plan` → `step` ×n → `verify`), live step cards, Stop, copy result, retry the failed step without losing earlier work |
+| Pricing | ✅ real but **preview until configured** — Paddle price IDs in `public/tiers.js` + two env vars and it goes live |
+| Payment webhooks | ✅ verified (HMAC-SHA256, replay-window checked), events journalled to Supabase when configured. Plan activation waits on user accounts, on purpose |
+| Files | 🟡 browser-side text extraction (`.txt .md .csv .json` + code) sent with your next message; PDF/DOCX need server-side parsing (`NEXT_STEPS.md` Sprint D) |
+| Image studio | 🟡 uses a public keyless image endpoint, no account needed; server-side generation is a swap in `index.html` |
+| Voice input | 🟡 Web Speech API (Chrome/Safari); unsupported browsers get a toast instead of silence |
+| Accounts / synced history | ⛔ not built — Supabase schema is ready (`supabase/schema.sql`, RLS on). Sprint B |
+
+## Deploy
+
+Your repo is already connected to **Netlify**, so that's the path of least resistance — free, no build
+config to remember (it lives in `netlify.toml`), one env var to get chat working. Full walkthrough:
+**[NETLIFY.md](NETLIFY.md)**.
+
+```bash
+# Netlify: dashboard → Site configuration → Environment variables → add
+GEMINI_API_KEY=<key from https://aistudio.google.com/apikey>   # then redeploy
+```
+
+Prefer Cloudflare? Both supported styles are documented in **[CLOUDFLARE.md](CLOUDFLARE.md)** and behave
+identically, because all three hosts call the same `shared/api.js`:
 
 | | A · Cloudflare Workers (recommended) | B · Cloudflare Pages |
 |---|---|---|
-| Command | `npx wrangler login && npm run deploy` | Cloudflare dashboard → Workers & Pages → Create → Pages → connect this repo |
+| Command | `npx wrangler login && npm run deploy` | Pages → connect this repo |
 | Build command | none needed | `exit 0` |
-| Build output directory | n/a (`wrangler.json` says `./public`) | **`public`** — not `/`, not `.` |
+| Build output directory | n/a (`wrangler.json` → `./public`) | **`public`** — not `/`, not `.` |
 | API routes | `worker/index.js` | `functions/api/*.js` (auto-detected) |
-| Secrets | `npx wrangler secret put NAME` | Pages → Settings → Variables and Secrets → Add |
+| Secrets | `npx wrangler secret put GEMINI_API_KEY` | Settings → Environment variables & Secrets → **redeploy** |
 
-Then add the AI key — this is the only secret you *need*:
-
-```bash
-npx wrangler secret put GEMINI_API_KEY     # from https://aistudio.google.com/apikey
-# optional: npx wrangler secret put GEMINI_MODEL   (default gemini-2.5-flash-lite)
-```
-
-For Pages, add the same value in **Settings → Variables and Secrets → Secrets**, then **redeploy**
-(secrets are read at build/deploy time; changing one without redeploying changes nothing).
-
-Full click-by-click instructions, custom domain, and the Pages-specific gotchas: [CLOUDFLARE.md](CLOUDFLARE.md).
+One host must own the API: env vars are per-host, so if Netlify serves the pages and Cloudflare holds the
+key, the app correctly reports "backend is not connected".
 
 ## Verify it works
 
@@ -69,21 +80,24 @@ secret is missing (AI connected/not, Paddle environment, token match, rate limit
 ```bash
 npm install
 cp .dev.vars.example .dev.vars     # put your Gemini key here; .dev.vars is gitignored
-npm run dev                        # Worker + static assets  → http://localhost:8787
-npm run dev:pages                  # Pages Functions variant → http://localhost:8788
-npm test                           # structure check + 37 API tests + 32 jsdom UI checks
+npm run dev                        # Cloudflare Worker + static assets  → http://localhost:8787
+npm run dev:pages                  # Cloudflare Pages Functions variant → http://localhost:8788
+npm test                           # structure check + 50 API tests + 52 jsdom UI checks
+npm run dev:mock                   # no API key? chat + agent run against scripts/mock-gemini.mjs
 ```
 
 ## Secrets / env reference
 
-Set in Cloudflare (Workers: `wrangler secret put`, Pages: Variables and Secrets). Details in [CLOUDFLARE.md](CLOUDFLARE.md#secrets).
+Same names on every host (Netlify → Environment variables; Cloudflare → `wrangler secret put`).
 
 | Name | Required | Purpose |
 |---|---|---|
-| `GEMINI_API_KEY` | yes for chat | server-side Gemini key |
+| `GEMINI_API_KEY` | yes for chat + agent | server-side Gemini key |
 | `GEMINI_MODEL` | no | default `gemini-2.5-flash-lite` |
-| `GEMINI_MODEL_FALLBACK` | no | retried once if the model name is wrong/unavailable |
+| `GEMINI_MODEL_FALLBACK` | no | retried once when the model name is wrong/unavailable |
 | `GEMINI_TEMPERATURE` `GEMINI_MAX_TOKENS` `GEMINI_THINKING_BUDGET` | no | generation tuning |
+| `PROVIDER_TIMEOUT_MS` | no | ms before we abort the provider call (Netlify wrapper sets 21000; Cloudflare default 55000) |
+| `GEMINI_BASE_URL` `GEMINI_API_VERSION` | no | point at a proxy/gateway, or the local test mock |
 | `PADDLE_ENV` `PADDLE_CLIENT_TOKEN` | only for billing | `sandbox`/`production` + `test_…`/`live_…` token |
 | `PADDLE_WEBHOOK_SECRET` | only for webhooks | verifies `POST /api/paddle/webhook` |
 | `SUPABASE_URL` `SUPABASE_SERVICE_ROLE_KEY` | no | journals payment events (needs `supabase/schema.sql`) |
@@ -98,6 +112,11 @@ Until then the pricing page shows preview plans instead of an error — on purpo
 
 ## Before you tell Google about the site
 
-`public/sitemap.xml`, `public/robots.txt` and the page canonical still contain `YOUR-DOMAIN`.
-Replace it with your live domain (`npm run check` reminds you until you do). Canonical/og:url are also
-fixed automatically at runtime from `location.origin`, so social previews work even before you edit them.
+`public/sitemap.xml`, `public/robots.txt` and the page canonical still contain `YOUR-DOMAIN`
+(`npm run check` warns until you replace it). Canonical/og:url are also fixed automatically at runtime from
+`location.origin`, so social previews are already correct on whatever host you use.
+
+## Something looks broken?
+
+[TROUBLESHOOTING.md](TROUBLESHOOTING.md) is a symptom → cause → fix table covering Netlify, Cloudflare
+Pages, Workers, the AI provider and Paddle. Start with `npm run check` and `/api/health`.

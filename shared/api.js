@@ -35,7 +35,7 @@ const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
 const MAX_BODY_BYTES = 512 * 1024;
 const MAX_MESSAGES = 40;
 const MAX_MESSAGE_CHARS = 24000;
-const GEMINI_TIMEOUT_MS = 60000;
+const PROVIDER_TIMEOUT_MS_DEFAULT = 55000;
 const WEBHOOK_MAX_SKEW_SECONDS = 300;
 
 /* ------------------------------------------------------------------ helpers */
@@ -69,7 +69,7 @@ function methodNotAllowed(allowed) {
 
 function apiNotFound() {
   return errorResponse(
-    'Unknown API route. Available: GET /api/health, POST /api/chat, GET /api/paddle-config, POST /api/paddle/webhook.',
+    'Unknown API route. Available: GET /api/health, POST /api/chat, POST /api/agent, GET /api/paddle-config, POST /api/paddle/webhook.',
     404,
     'ROUTE_NOT_FOUND'
   );
@@ -146,7 +146,7 @@ export function extractText(data) {
     .trim();
 }
 
-function geminiBody(messages, env) {
+function geminiBody(messages, env, options = {}) {
   const body = {
     contents: toContents(messages),
     generationConfig: {
@@ -159,6 +159,7 @@ function geminiBody(messages, env) {
   else body.systemInstruction = {
     parts: [{ text: 'You are Realm AI, a helpful, friendly assistant. Reply in English unless the user writes in another language. Be clear and concise.' }]
   };
+  if (options.json) body.generationConfig.responseMimeType = 'application/json';
   const budget = env.GEMINI_THINKING_BUDGET;
   if (budget !== undefined && budget !== '') {
     body.generationConfig.thinkingConfig = { thinkingBudget: Math.max(-1, num(budget, 0)) };
@@ -175,7 +176,10 @@ export function geminiEndpoint(env, model) {
 
 async function geminiRequest(body, model, key, env) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+  // Netlify Functions are hard-killed at 26s, so the host wrapper sends a smaller budget;
+  // self-limiting lets us answer with a useful "narrow it down" message instead of a platform timeout.
+  const budget = Math.max(5000, Math.min(120000, num(env.PROVIDER_TIMEOUT_MS, PROVIDER_TIMEOUT_MS_DEFAULT)));
+  const timer = setTimeout(() => controller.abort(), budget);
   try {
     const res = await fetch(geminiEndpoint(env, model), {
         method: 'POST',
@@ -218,9 +222,9 @@ function describeProviderError(status, data, model) {
   return { message: `The AI provider failed (HTTP ${status}). Please try again.`, code: 'PROVIDER_ERROR', status: 502 };
 }
 
-async function callGemini(messages, env) {
+async function callGemini(messages, env, options = {}) {
   const model = trim(env.GEMINI_MODEL, 80) || DEFAULT_MODEL;
-  const body = geminiBody(messages, env);
+  const body = geminiBody(messages, env, options);
   let attempt = await geminiRequest(body, model, env.GEMINI_API_KEY, env);
 
   // A mistyped / unavailable model is the most common setup mistake: try the fallback once.
@@ -322,19 +326,25 @@ async function enforceRateLimit(request, env) {
 
 /* ------------------------------------------------------------------ routes */
 
-async function handleChat(request, env) {
+/** Common preconditions for anything that costs a provider call. */
+async function guardPaidRoute(request, env) {
   if (!env.GEMINI_API_KEY) {
     return json(
       {
-        error: 'AI is not connected yet. Add GEMINI_API_KEY as a secret in Cloudflare and redeploy.',
+        error: 'AI is not connected yet. Add GEMINI_API_KEY as a secret in Cloudflare (or Netlify env vars) and redeploy.',
         code: 'AI_NOT_CONFIGURED'
       },
       503
     );
   }
-
   const limited = await enforceRateLimit(request, env);
   if (limited) return limited;
+  return null;
+}
+
+async function handleChat(request, env) {
+  const blocked = await guardPaidRoute(request, env);
+  if (blocked) return blocked;
 
   let raw;
   try {
@@ -359,7 +369,9 @@ async function handleChat(request, env) {
     result = await callGemini(messages, env);
   } catch (err) {
     const detail = String(err?.message || err || '');
-    if (/abort/i.test(detail)) return errorResponse('The AI provider took too long to answer. Try again.', 504, 'PROVIDER_TIMEOUT');
+    if (/abort/i.test(detail)) {
+      return errorResponse('The model took too long to answer. Ask something narrower, or lower GEMINI_MAX_TOKENS.', 504, 'PROVIDER_TIMEOUT');
+    }
     return errorResponse('Could not reach the AI provider. Check your network/provider status and try again.', 502, 'PROVIDER_UNREACHABLE');
   }
 
@@ -518,6 +530,164 @@ async function handlePaddleWebhook(request, env) {
   return json({ received: true, event_id: event.event_id || null, event_type: event.event_type || null, event_log: stored });
 }
 
+
+/* --------------------------------------------------------- agent runner */
+
+/**
+ * Agent mode is deliberately *client-driven and resumable*: each phase is its own request
+ * (plan → step 0 → step 1 → … → verify) so that one request is always one model call.
+ * That keeps every call inside the 26s Netlify ceiling and inside a Cloudflare Worker's
+ * budget, shows real progress in the UI, and lets a visitor stop or retry a single step
+ * instead of losing a two-minute run. No server-side job storage is needed either.
+ */
+const AGENT_MAX_STEPS = 6;
+const AGENT_STEP_CHARS = 3000;
+const AGENT_OUTPUT_CHARS = 4000;
+
+const AGENT_SYSTEM = 'You are Realm Agent, a careful work engine inside the Realm AI workspace. You only ever do the single piece of work you were asked for, and you never invent facts, files, URLs or numbers. When you are unsure, say what is missing instead of guessing.';
+
+/** Models emit raw newlines/tabs inside JSON string values surprisingly often; that is invalid JSON. */
+function escapeControlCharsInsideStrings(input) {
+  let out = '';
+  let inString = false;
+  let escaped = false;
+  for (const ch of input) {
+    if (!inString) {
+      if (ch === '"') inString = true;
+      out += ch;
+      continue;
+    }
+    if (escaped) { out += ch; escaped = false; continue; }
+    if (ch === '\\') { out += ch; escaped = true; continue; }
+    if (ch === '"') { inString = false; out += ch; continue; }
+    const code = ch.charCodeAt(0);
+    if (code === 10) { out += '\\n'; continue; }
+    if (code === 13) { continue; }
+    if (code === 9) { out += '\\t'; continue; }
+    if (code < 0x20) continue;
+    out += ch;
+  }
+  return out;
+}
+
+/** LLMs wrapping JSON in prose is common; grab the outermost object. */
+export function parseJsonObject(text) {
+  if (typeof text !== 'string') return null;
+  const cleaned = text.replace(/^\s*```(?:json)?/i, '').replace(/```\s*$/, '').trim();
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+  const candidates = [cleaned];
+  if (start > -1 && end > start) candidates.push(cleaned.slice(start, end + 1));
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch {}
+    try {
+      return JSON.parse(escapeControlCharsInsideStrings(candidate));
+    } catch {}
+  }
+  return null;
+}
+
+function agentPrompt(phase, payload) {
+  const goal = trim(payload.goal, 2000).trim();
+  if (!goal) return null;
+  if (phase === 'plan') {
+    return {
+      system: `${AGENT_SYSTEM}
+Plan the work for the goal below as 2-${AGENT_MAX_STEPS} sequential steps. Each step must be independently doable in one reply, and the last step must produce the deliverable.
+Answer with JSON only, exactly this shape:
+{"steps":[{"title":"short imperative","detail":"what the finished step must contain"}],"deliverable":"one line describing the final output","missing":"empty string, or what you need from the user first"}`,
+      user: `Goal: ${goal}` + (payload.context ? `\n\nContext from the user:\n${trim(payload.context, 4000)}` : '')
+    };
+  }
+  if (phase === 'step') {
+    const index = Math.max(0, Number(payload.stepIndex) || 0);
+    const step = (payload.steps || [])[index];
+    if (!step || !String(step.title).trim()) return null;
+    const done = (payload.outputs || []).slice(0, index).map((o, i) => `### Step ${i + 1}: ${trim((payload.steps?.[i]?.title || ''), 120)}\n${trim(o, AGENT_OUTPUT_CHARS)}`).join('\n\n');
+    return {
+      system: `${AGENT_SYSTEM}
+You are executing ONE step of a plan. Use the earlier steps' results below as your only working memory. Be concrete and produce the actual work, not a description of it. Keep it under ${AGENT_STEP_CHARS} characters.`,
+      user: `Goal: ${goal}\nDeliverable: ${trim(payload.deliverable, 300)}\n\n${done ? `Earlier steps:\n${done}\n` : ''}\nNow do step ${index + 1} of ${(payload.steps || []).length}: ${String(step.title).slice(0, 200)}\nRequirement: ${String(step.detail || '').slice(0, 400)}`
+    };
+  }
+  if (phase === 'verify') {
+    const outputs = (payload.outputs || []).map((o, i) => `### Step ${i + 1}: ${trim((payload.steps?.[i]?.title || ''), 120)}\n${trim(o, AGENT_OUTPUT_CHARS)}`).join('\n\n');
+    return {
+      system: `${AGENT_SYSTEM}
+Check whether the steps below actually answer the goal, then write the final deliverable by combining them. Do not repeat the step log.
+Answer with JSON only, exactly this shape:
+{"verdict":"complete" or "incomplete","gaps":["short gap, or empty"],"final":"the deliverable, formatted in markdown for a chat bubble"}
+If you cannot produce valid JSON, answer with the markdown only.`,
+      user: `Goal: ${goal}\nDeliverable: ${trim(payload.deliverable, 300)}\n\n${outputs || '(no steps were run)'}`
+    };
+  }
+  return null;
+}
+
+async function runAgentPhase(request, env) {
+  const blocked = await guardPaidRoute(request, env);
+  if (blocked) return blocked;
+
+  let raw;
+  try {
+    raw = await request.text();
+  } catch {
+    return errorResponse('Could not read the request body.', 400, 'BAD_BODY');
+  }
+  if (raw.length > MAX_BODY_BYTES) return errorResponse('The run is too large; drop some step results and retry.', 413, 'BODY_TOO_LARGE');
+
+  let payload;
+  try {
+    payload = JSON.parse(raw || '{}');
+  } catch {
+    return errorResponse('Body must be valid JSON.', 400, 'BAD_JSON');
+  }
+  const phase = String(payload?.phase || 'plan');
+  if (!['plan', 'step', 'verify'].includes(phase)) return errorResponse('phase must be "plan", "step" or "verify".', 400, 'BAD_PHASE');
+
+  const prompt = agentPrompt(phase, { goal: payload?.goal, context: payload?.context, steps: payload?.steps, deliverable: payload?.deliverable, outputs: payload?.outputs, stepIndex: payload?.stepIndex });
+  if (!prompt) return errorResponse(phase === 'step' ? 'stepIndex is outside the plan.' : 'goal is required.', phase === 'step' ? 400 : 400, 'BAD_AGENT_REQUEST');
+
+  const messages = [{ role: 'system', content: prompt.system }, { role: 'user', content: prompt.user }];
+  const result = await callGemini(messages, { ...env, GEMINI_MAX_TOKENS: env.GEMINI_MAX_TOKENS || 1500 }, { json: phase === 'plan' });
+  if (result.badReply) return json({ error: result.badReply, code: 'BAD_PROVIDER_REPLY' }, 502);
+  if (result.status >= 400) {
+    const d = describeProviderError(result.status, result.data, result.modelUsed || trim(env.GEMINI_MODEL, 80) || DEFAULT_MODEL);
+    return json({ error: d.message, code: d.code, model: result.modelUsed || null }, d.status);
+  }
+
+  const text = result.data?.text || '';
+  if (phase === 'plan') {
+    const parsed = parseJsonObject(text);
+    const steps = Array.isArray(parsed?.steps)
+      ? parsed.steps
+          .map((s, i) => ({ id: i, title: trim(s?.title, 160).trim(), detail: trim(s?.detail, 600).trim() }))
+          .filter((s) => s.title)
+          .slice(0, AGENT_MAX_STEPS)
+      : [];
+    if (!steps.length) {
+      // The model ignored the JSON contract: still give the user a usable single-step run.
+      return json({ phase, steps: [{ id: 0, title: 'Work on the goal', detail: trim(text, AGENT_STEP_CHARS) }], deliverable: trim(parsed?.deliverable, 300) || 'A written answer', fallback: true });
+    }
+    return json({ phase, steps, deliverable: trim(parsed?.deliverable, 300) || 'A written answer', missing: trim(parsed?.missing, 300) || '' });
+  }
+  if (phase === 'step') {
+    return json({ phase, index: Math.max(0, Number(payload.stepIndex) || 0), output: trim(text, AGENT_OUTPUT_CHARS * 2) });
+  }
+  const parsed = parseJsonObject(text);
+  if (parsed && typeof parsed === 'object' && (parsed.final || parsed.verdict)) {
+    return json({
+      phase,
+      verdict: parsed.verdict === 'complete' ? 'complete' : 'incomplete',
+      gaps: (Array.isArray(parsed.gaps) ? parsed.gaps : []).map((g) => trim(g, 300)).filter(Boolean).slice(0, 6),
+      final: trim(parsed.final || text, AGENT_OUTPUT_CHARS * 3)
+    });
+  }
+  return json({ phase, verdict: 'complete', gaps: [], final: trim(text, AGENT_OUTPUT_CHARS * 3), fallback: true });
+}
+
 /* ---------------------------------------------------------------- dispatcher */
 
 /**
@@ -541,6 +711,8 @@ export async function handleApi(request, env) {
     response = cors ? new Response(null, { status: 204, headers: cors }) : new Response(null, { status: 204 });
   } else if (path === '/api/health') {
     response = request.method === 'GET' || request.method === 'HEAD' ? handleHealth(env) : methodNotAllowed('GET');
+  } else if (path === '/api/agent') {
+    response = request.method === 'POST' ? await runAgentPhase(request, env) : methodNotAllowed('POST');
   } else if (path === '/api/chat') {
     response = request.method === 'POST' ? await handleChat(request, env) : methodNotAllowed('POST');
   } else if (path === '/api/paddle-config') {
@@ -559,5 +731,14 @@ export async function handleApi(request, env) {
   return response;
 }
 
-export const ROUTES = ['/api/health', '/api/chat', '/api/paddle-config', '/api/paddle/webhook'];
+export const ROUTES = ['/api/health', '/api/chat', '/api/agent', '/api/paddle-config', '/api/paddle/webhook'];
+
+/** Everything the app reads from the platform. Wrappers use this list because some runtimes
+ *  (Netlify v2 in particular) expose env through a getter API instead of a plain object. */
+export const ENV_KEYS = [
+  'GEMINI_API_KEY', 'GEMINI_MODEL', 'GEMINI_MODEL_FALLBACK', 'GEMINI_TEMPERATURE', 'GEMINI_MAX_TOKENS',
+  'GEMINI_THINKING_BUDGET', 'GEMINI_BASE_URL', 'GEMINI_API_VERSION', 'PROVIDER_TIMEOUT_MS',
+  'PADDLE_ENV', 'PADDLE_CLIENT_TOKEN', 'PADDLE_WEBHOOK_SECRET',
+  'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'RATE_LIMIT_PER_MINUTE', 'ALLOWED_ORIGINS'
+];
 export { DEFAULT_MODEL };

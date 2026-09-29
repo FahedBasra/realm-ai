@@ -2,7 +2,7 @@
   "name": "realm-ai",
   "version": "3.0.0",
   "private": true,
-  "description": "Realm AI — static frontend + Cloudflare Worker (Gemini chat, Paddle pricing, payment webhooks).",
+  "description": "Realm AI \u2014 static frontend + Cloudflare Worker (Gemini chat, Paddle pricing, payment webhooks).",
   "type": "module",
   "engines": {
     "node": ">=18.14.1"
@@ -16,7 +16,9 @@
     "secret:ai": "wrangler secret put GEMINI_API_KEY",
     "dry-run": "wrangler deploy --dry-run",
     "test": "node scripts/check.mjs && node tests/realm-api.test.mjs && node tests/ui-smoke.test.mjs",
-    "test:ui": "node tests/ui-smoke.test.mjs"
+    "test:ui": "node tests/ui-smoke.test.mjs",
+    "mock:ai": "node scripts/mock-gemini.mjs",
+    "dev:mock": "node scripts/dev-mock.mjs"
   },
   "repository": {
     "type": "git",

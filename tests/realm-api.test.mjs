@@ -7,7 +7,7 @@
  */
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { handleApi, normalizeMessages, toContents, extractText, verifyPaddleSignature, ROUTES } from '../shared/api.js';
+import { handleApi, normalizeMessages, toContents, extractText, verifyPaddleSignature, parseJsonObject, ROUTES } from '../shared/api.js';
 
 const enc = new TextEncoder();
 let passed = 0;
@@ -185,6 +185,11 @@ const server = http.createServer((req, res) => {
     try { parsed = JSON.parse(body); } catch {}
     seen.push({ url: req.url, headers: req.headers, body: parsed });
     const send = (status, obj) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)); };
+    if (mockMode === 'agent-plan') return send(200, { candidates: [{ content: { parts: [{ text: '{"steps":[{"title":"Research","detail":"collect facts"},{"title":"Draft","detail":"write the plan"},{"title":"Review","detail":"check gaps"}],"deliverable":"A day-by-day plan","missing":""}' }] }, finishReason: 'STOP' }] });
+    if (mockMode === 'agent-prose') return send(200, { candidates: [{ content: { parts: [{ text: 'Here is what I would do: first gather the facts, then write the plan. I will keep it short and practical for a student team.' }] }, finishReason: 'STOP' }] });
+    if (mockMode === 'agent-many') return send(200, { candidates: [{ content: { parts: [{ text: JSON.stringify({ steps: [{}, { title: 'a', detail: 'x' }, { title: 'b' }, { title: 'c' }, { title: 'd' }, { title: 'e' }, { title: 'f' }, { title: 'g' }, { title: 'h' }], deliverable: 'd' }) }] } }] });
+    if (mockMode === 'agent-step') return send(200, { candidates: [{ content: { parts: [{ text: 'third result: concrete work product for step c' }] } }] });
+    if (mockMode === 'agent-verify') return send(200, { candidates: [{ content: { parts: [{ text: '{"verdict":"incomplete","gaps":["pricing numbers are missing"],"final":"# Launch week\n\nDay 1 …" }' }] } }] });
     if (mockMode === 'ok') return send(200, { candidates: [{ content: { parts: [{ text: 'Hello from ', thought: false }, { text: 'Gemini' }, { text: 'reasoning', thought: true }] }, finishReason: 'STOP' }] });
     if (mockMode === 'ratelimit') { res.writeHead(429, { 'content-type': 'application/json', 'retry-after': '17' }); return res.end(JSON.stringify({ error: { message: 'Resource has been exhausted (quota).' } })); }
     if (mockMode === 'notfound') return send(404, { error: { code: 404, message: 'Model not found on this endpoint.' } });
@@ -198,7 +203,7 @@ const server = http.createServer((req, res) => {
 });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${server.address().port}`;
-const envWith = (extra = {}) => ({ GEMINI_API_KEY: 'AIzaTESTKEY1234567890', GEMINI_BASE_URL: base, ...extra });
+const envWith = (extra = {}) => ({ GEMINI_API_KEY: 'AIzaTESTKEY1234567890', GEMINI_BASE_URL: base, RATE_LIMIT_PER_MINUTE: 0, ...extra });
 const ask = async (env, messages = [{ role: 'user', content: 'hi there' }]) => {
   const res = await handleApi(post('/api/chat', { messages }), env);
   return { status: res.status, body: await res.json().catch(() => ({})) };
@@ -281,7 +286,6 @@ await test('the whole API stays usable when the provider returns garbage', async
   assert.ok(body.error);
   assert.ok(!body.stack);
 });
-server.close();
 
 
 console.log('\nhost wrappers (Netlify mounts functions at a different path)');
@@ -289,10 +293,10 @@ const netlifyHandler = (await import('../netlify/functions/api.mjs')).default;
 for (const route of ROUTES) {
   await test(`${route} is reachable through /.netlify/functions/api`, async () => {
     const path = '/.netlify/functions/api' + route.slice(4);
-    const res = await netlifyHandler(new Request(`https://realm.netlify.app${path}`, { method: route === '/api/chat' || route === '/api/paddle/webhook' ? 'POST' : 'GET', body: route === '/api/chat' || route === '/api/paddle/webhook' ? '{}' : undefined, headers: { 'content-type': 'application/json' } }), { env: EMPTY });
+    const res = await netlifyHandler(new Request(`https://realm.netlify.app${path}`, { method: ['/api/chat', '/api/agent', '/api/paddle/webhook'].includes(route) ? 'POST' : 'GET', body: ['/api/chat', '/api/agent', '/api/paddle/webhook'].includes(route) ? '{}' : undefined, headers: { 'content-type': 'application/json' } }), { env: EMPTY });
     const json2 = await res.json();
     assert.ok([200, 503].includes(res.status), `${route} -> ${res.status} ${JSON.stringify(json2)}`);
-    if (route !== '/api/health') assert.ok(json2.code, `${route} must return a machine-readable code`);
+    if (route !== '/api/health') assert.ok(json2.code || typeof json2.phase === 'string', `${route} must return a code or a phase`);
   });
 }
 await test('the Netlify wrapper never answers 404 for a known API path', async () => {
@@ -300,9 +304,110 @@ await test('the Netlify wrapper never answers 404 for a known API path', async (
   assert.equal(res.status, 404);
   assert.equal((await res.json()).code, 'ROUTE_NOT_FOUND');
 });
+await test('env is read from context.env, netlify.env and process.env alike', async () => {
+  const { collectEnv } = await import('../shared/netlify-env.js');
+  assert.equal(collectEnv({ env: { GEMINI_API_KEY: 'from_context' } }).GEMINI_API_KEY, 'from_context');
+  assert.equal(
+    collectEnv({ netlify: { env: { get: (k) => (k === 'GEMINI_API_KEY' ? 'from_helper' : undefined) } } }).GEMINI_API_KEY,
+    'from_helper'
+  );
+  const prev = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = 'from_process';
+  assert.equal(collectEnv({}).GEMINI_API_KEY, 'from_process');
+  if (prev === undefined) delete process.env.GEMINI_API_KEY; else process.env.GEMINI_API_KEY = prev;
+  assert.equal(collectEnv({ env: { UNKNOWN_VAR: 'x' } }).UNKNOWN_VAR, 'x');
+  assert.equal(collectEnv(undefined).GEMINI_API_KEY, undefined);
+  // a broken context object must not take the function down
+  assert.equal(collectEnv({ get env() { throw new Error('boom'); } }).GEMINI_API_KEY, undefined);
+});
 await test('missing env (context.env absent) degrades instead of crashing', async () => {
   const res = await netlifyHandler(new Request('https://realm.netlify.app/.netlify/functions/api/chat', { method: 'POST', body: '{"messages":[{"role":"user","content":"hi"}]}', headers: { 'content-type': 'application/json' } }), {});
   assert.equal(res.status, 503);
 });
 
+
+console.log('\nAgent runner (plan / step / verify) against the mock provider');
+const agentPost = async (body, env = envWith()) => {
+  const res = await handleApi(post('/api/agent', body), env);
+  return { status: res.status, body: await res.json().catch(() => ({})) };
+};
+await test('refuses politely when the AI secret is missing', async () => {
+  const { status, body } = await agentPost({ phase: 'plan', goal: 'x' }, { GEMINI_BASE_URL: base });
+  assert.equal(status, 503);
+  assert.equal(body.code, 'AI_NOT_CONFIGURED');
+});
+await test('rejects an unknown phase and an empty goal', async () => {
+  assert.equal((await agentPost({ phase: 'teleport', goal: 'x' })).status, 400);
+  assert.equal((await agentPost({ phase: 'plan', goal: '   ' })).status, 400);
+});
+await test('parseJsonObject survives fenced code blocks, prose and raw newlines in strings', async () => {
+  assert.deepEqual(parseJsonObject('```json\n{"a":1}\n```'), { a: 1 });
+  assert.deepEqual(parseJsonObject('Sure! Here you go:\n{"a":[1,2]}\nHope that helps.'), { a: [1, 2] });
+  assert.deepEqual(parseJsonObject('{"a":"line one\nline two\ttabbed"}'), { a: 'line one\nline two\ttabbed' });
+  assert.equal(parseJsonObject('no json here'), null);
+  assert.equal(parseJsonObject(null), null);
+});
+await test('plan phase asks the provider for JSON and normalises the steps', async () => {
+  mockMode = 'agent-plan';
+  const { status, body } = await agentPost({ goal: 'Plan a launch week for my study app', phase: 'plan' });
+  assert.equal(status, 200);
+  assert.equal(body.steps.length, 3, JSON.stringify(body));
+  assert.deepEqual(body.steps.map((s) => s.id), [0, 1, 2]);
+  assert.equal(body.deliverable, 'A day-by-day plan');
+  assert.ok(/JSON only/.test(seen[seen.length - 1].body.systemInstruction.parts[0].text));
+  assert.equal(seen[seen.length - 1].body.generationConfig.responseMimeType, 'application/json');
+});
+await test('a plan that ignores the JSON contract still yields a usable single step', async () => {
+  mockMode = 'agent-prose';
+  const { body } = await agentPost({ phase: 'plan', goal: 'g' });
+  assert.equal(body.steps.length, 1);
+  assert.equal(body.fallback, true);
+  assert.ok(body.steps[0].detail.length > 5);
+});
+await test('plans are capped at 6 steps and junk steps are dropped', async () => {
+  mockMode = 'agent-many';
+  const { body } = await agentPost({ phase: 'plan', goal: 'g' });
+  assert.equal(body.steps.length, 6);
+  assert.ok(body.steps.every((s) => s.title));
+});
+await test('step phase carries prior outputs and only runs the requested step', async () => {
+  mockMode = 'agent-step';
+  seen.length = 0;
+  const { status, body } = await agentPost({
+    phase: 'step', goal: 'g', deliverable: 'd', stepIndex: 2,
+    steps: [{ title: 'a' }, { title: 'b' }, { title: 'c', detail: 'do c' }],
+    outputs: ['first result', 'second result']
+  });
+  assert.equal(status, 200);
+  assert.equal(body.index, 2);
+  const prompt = seen[0].body.contents[0].parts[0].text;
+  assert.ok(/Step 1: a/.test(prompt) && /first result/.test(prompt), prompt);
+  assert.ok(/Now do step 3 of 3/.test(prompt), prompt);
+  assert.ok(!/second result[\s\S]*third/.test(prompt));
+});
+await test('a stepIndex outside the plan is a 400, not a crash', async () => {
+  mockMode = 'agent-step';
+  const { status } = await agentPost({ phase: 'step', goal: 'g', steps: [{ title: 'only' }], stepIndex: 7 });
+  assert.equal(status, 400);
+});
+await test('verify phase returns verdict + gaps + final', async () => {
+  mockMode = 'agent-verify';
+  const { body } = await agentPost({ phase: 'verify', goal: 'g', steps: [{ title: 'a' }], outputs: ['did the thing'] });
+  assert.equal(body.verdict, 'incomplete');
+  assert.deepEqual(body.gaps, ['pricing numbers are missing']);
+  assert.match(body.final, /launch week/i);
+});
+await test('verify degrades to the raw text when the model skips JSON', async () => {
+  mockMode = 'agent-prose';
+  const { body } = await agentPost({ phase: 'verify', goal: 'g', steps: [{ title: 'a' }], outputs: ['x'] });
+  assert.equal(body.verdict, 'complete');
+  assert.ok(body.final.length > 5);
+});
+await test('provider failures inside a run surface as retryable errors', async () => {
+  mockMode = 'ratelimit';
+  const { status, body } = await agentPost({ phase: 'step', goal: 'g', steps: [{ title: 'a' }], stepIndex: 0 });
+  assert.equal(status, 429);
+  assert.equal(body.code, 'PROVIDER_RATE_LIMIT');
+});
+server.close();
 console.log(`\n${passed} test group(s) passed${process.exitCode ? ' — with failures' : ''}.\n`);

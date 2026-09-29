@@ -14,6 +14,10 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+  # Netlify kills functions at 26s no matter what; the agent runner therefore does
+  # ONE model call per request (plan / step / verify) instead of one long request.
+  # AI answers still need headroom, so the wrapper caps the provider call a little below this.
+  timeout = 26
 
 # One function serves every API route; keep in sync with ROUTES in shared/api.js.
 [[redirects]]

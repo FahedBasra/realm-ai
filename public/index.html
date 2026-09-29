@@ -50,6 +50,7 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .chat-layout{height:calc(100vh - 64px);display:grid;grid-template-columns:235px minmax(0,1fr) 260px}.chat-list{border-right:1px solid var(--line);padding:15px;overflow:auto;background:rgba(7,11,19,.55)}.chat-list h4{margin:0 0 10px;color:#74829a;font-size:10px;text-transform:uppercase;letter-spacing:.12em}.chat-title{padding:10px;border-radius:10px;color:#8c9ab3;font-size:10px;margin:3px 0}.chat-title.active,.chat-title:hover{background:#111b2f;color:#fff}.chat-main{min-width:0;display:flex;flex-direction:column}.chat-hero{text-align:center;padding:45px 18px 22px}.chat-hero h2{font-size:35px;margin:0 0 8px;letter-spacing:-.04em}.chat-hero p{color:#7988a2;font-size:12px}.messages{flex:1;overflow:auto;padding:10px 22px 18px}.msg{display:flex;gap:10px;max-width:880px;margin:14px auto}.msg.me{justify-content:flex-end}.bubble{max-width:76%;padding:11px 13px;border:1px solid #22324f;background:#0c1526;border-radius:13px;font-size:12px;line-height:1.6}.msg.me .bubble{background:linear-gradient(135deg,#172b54,#20153c);border-color:#314b79}.composer-wrap{padding:12px 20px 15px;border-top:1px solid var(--line);background:rgba(7,11,19,.82)}.composer{max-width:900px;margin:auto;border:1px solid #324768;border-radius:16px;background:#0a1220;box-shadow:0 16px 45px rgba(0,0,0,.23)}.composer-top{display:flex;gap:6px;padding:8px 9px 0}.attach{width:31px;height:31px;border:1px solid #22344f;border-radius:9px;background:#0d1728;color:#9aa9c1}.attach:hover{color:#fff;border-color:#41638f}.composer textarea{width:100%;min-height:48px;border:0;outline:0;background:transparent;color:#fff;padding:10px 12px;resize:none}.composer-bottom{display:flex;align-items:center;gap:7px;padding:0 9px 9px}.mode{font-size:9px;color:#7786a0;padding:5px 7px;border-radius:7px;background:#101a2e}.send{margin-left:auto;border:0;width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#299bff,#8c50f5);color:#fff;font-weight:900}.disclaimer{text-align:center;color:#515f78;font-size:8px;margin-top:7px}.chat-tools{border-left:1px solid var(--line);padding:17px;background:rgba(7,11,19,.55)}.chat-tools .card{padding:15px;margin-bottom:10px}.tool-row{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #1a273d}.tool-row:last-child{border-bottom:0}.tool-row .sq{width:26px;height:26px;border-radius:8px;background:#101c32;display:grid;place-items:center;color:#7ecbff}.tool-row b{font-size:9px}.tool-row span{display:block;font-size:8px;color:#65748f;margin-top:2px}
 .drop-upload{position:fixed;inset:0;display:none;place-items:center;background:rgba(3,7,14,.74);backdrop-filter:blur(8px);z-index:50}.drop-upload.show{display:grid}.uploadbox{width:min(540px,92vw);padding:26px;border-radius:22px;border:1px dashed #4b6fa8;background:#0b1323;text-align:center;box-shadow:var(--shadow)}.uploadbox h3{margin:10px 0 6px}.uploadbox p{color:#75839a;font-size:12px}.big-upload{border:1px dashed #355c8d;border-radius:15px;padding:28px;margin:18px 0;color:#8bb5e6;background:rgba(40,104,177,.06)}.file-pill{display:inline-flex;align-items:center;gap:6px;margin:4px;padding:6px 9px;background:#0f1a2d;border:1px solid #233b5e;border-radius:999px;font-size:9px;color:#9cb1cf}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.68);backdrop-filter:blur(7px);display:none;place-items:center;padding:20px;z-index:60}.modal.show{display:grid}.modalbox{width:min(470px,100%);background:#0b1220;border:1px solid #2b3d5d;border-radius:20px;padding:22px;box-shadow:var(--shadow)}.modalhead{display:flex;justify-content:space-between;align-items:center}.modalhead h3{margin:0}.close{border:0;background:transparent;color:#8c9bb4;font-size:22px}.stack{display:grid;gap:9px;margin-top:15px}.input{width:100%;border:1px solid #243651;background:#09111f;color:#fff;padding:11px 12px;border-radius:10px;outline:0}.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.plan{padding:19px;position:relative}.plan h3{margin:0 0 5px}.plan .price{font-size:30px;font-weight:900;margin:13px 0}.plan .per{color:#687793;font-size:11px}.plan ul{list-style:none;padding:0;margin:16px 0}.plan li{color:#7d8ca7;font-size:10px;padding:5px 0}.plan li:before{content:'✓';margin-right:7px;color:#65d7c5}.plan.pro{border-color:#6045ad;box-shadow:0 18px 65px rgba(80,50,190,.14)}.popular{position:absolute;right:14px;top:14px;font-size:8px;padding:4px 6px;border-radius:999px;background:#29164a;color:#d0b5ff;border:1px solid #614093}.notice{padding:11px;border-radius:11px;background:#0b1626;border:1px solid #233a58;color:#71829c;font-size:9px;line-height:1.55}
+.notice.warn{color:#ffd9a6;border-color:#6b4c1f;background:rgba(94,60,18,.4)}
 .mobile-menu{display:none}.footer{padding:45px 0 0;border-top:1px solid #17243a;margin-top:60px;display:flex;justify-content:space-between;color:#62718d;font-size:10px}.footer-links{display:flex;gap:16px}.footer-links button{border:0;background:transparent;color:#74839a;font-size:10px}
 @media(max-width:1100px){.feature-strip{grid-template-columns:repeat(4,1fr)}.feature:nth-child(4){border-right:0}.feature:nth-child(n+5){border-top:1px solid #18253b}.dashboard{grid-template-columns:1fr}.b3{grid-column:span 6}.b4{grid-column:span 6}.b5{grid-column:span 12}.chat-layout{grid-template-columns:200px minmax(0,1fr)}.chat-tools{display:none}}
 @media(max-width:850px){.app{grid-template-columns:1fr}.sidebar{display:none}.mobile-menu{display:inline-grid}.topbar{padding:0 13px}.search{width:36px;padding:8px}.search input{display:none}.hero{grid-template-columns:1fr;padding-top:34px}.product-frame{min-height:340px}.mock-body{grid-template-columns:120px 1fr}.mock-agent{display:none}.quick-actions{grid-template-columns:repeat(2,1fr)}.bento{grid-template-columns:1fr}.b1,.b2,.b3,.b4,.b5{grid-column:span 1}.plans{grid-template-columns:1fr}.workspace{grid-template-columns:1fr}.page{padding:25px 16px 50px}.chat-layout{grid-template-columns:1fr}.chat-list{display:none}.chat-hero{padding-top:35px}.feature-strip{grid-template-columns:repeat(2,1fr)}}
@@ -64,6 +65,16 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 .msg:not(.me) .bubble{max-width:min(760px,90%)}@media(max-width:850px){.crumb>span{display:none}.top-cta{padding:8px 10px}.top-actions .iconbtn{display:none}}
 .plans{grid-template-columns:repeat(4,1fr)}@media(max-width:1100px){.plans{grid-template-columns:repeat(2,1fr)}}@media(max-width:850px){.plans{grid-template-columns:1fr}}
 @media(max-width:850px){.sidebar.open{display:flex;position:fixed;left:0;top:0;bottom:0;width:282px;z-index:60;background:#070b14;box-shadow:0 0 0 100vmax rgba(0,0,0,.65);overflow-y:auto}}.toolbtn.on{background:#14213b;border-color:#41638f;color:#fff}
+.agent-steps{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.agent-step{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:rgba(9,14,26,.6)}
+.agent-step .dot{width:16px;height:16px;border-radius:50%;border:2px solid #35507c;flex:0 0 auto;margin-top:2px}
+.agent-step.run .dot{border-color:#36e7d4;border-top-color:transparent;animation:spin .8s linear infinite}
+.agent-step.done .dot{border-color:#3ddc97;background:#3ddc97}
+.agent-step.fail .dot{border-color:#ff7b8a;background:#ff7b8a}
+.agent-step b{display:block;font-size:12px}
+.agent-step p{margin:2px 0 0;font-size:11px;color:#91a0bb;line-height:1.5;white-space:pre-wrap}
+.agent-step .out{margin-top:6px;font-size:11px;color:#c8d6f5;white-space:pre-wrap;max-height:180px;overflow:auto;border-top:1px dashed #21304c;padding-top:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 <style>.billtoggle{display:inline-flex;margin:0 auto 18px;padding:4px;border:1px solid #2d3d60;border-radius:12px;background:#0b1220}.billtoggle button{border:0;background:transparent;color:#91a0bb;padding:8px 18px;border-radius:9px;font-weight:700}.billtoggle button.on{background:linear-gradient(135deg,#2aa9ff,#8b5cf6);color:#fff}#pricingRoot{text-align:center}#pricingRoot .plans{text-align:left}.plans3{grid-template-columns:repeat(3,1fr)!important}@media(max-width:1100px){.plans3{grid-template-columns:1fr!important}}#pricingRoot button:disabled{opacity:.5;cursor:not-allowed}</style>
 </head>
@@ -154,7 +165,11 @@ button,input,textarea{font:inherit}button{cursor:pointer}.hidden{display:none!im
 
 <section class="view" id="chatView"><div class="chat-layout"><aside class="chat-list"><button class="newchat" style="margin-bottom:18px" onclick="clearChat()">＋ New chat</button><h4>Recent</h4><div id="chatList"></div></aside><div class="chat-main"><div class="chat-hero"><div class="eyebrow"><i></i> Assistant online</div><h2>How can I help?</h2><p>Ask, create, analyze, plan or build.</p></div><div class="messages" id="messages"><div class="msg"><div class="avatar">R</div><div class="bubble">Welcome to <b>Realm AI</b>. Try asking me to summarize a document, create a study plan, explain code, or design a workflow.</div></div></div><div class="composer-wrap"><div class="composer"><div class="composer-top"><button class="attach" title="Upload file" onclick="openUpload()">＋</button><button class="attach" title="Image" onclick="showView('image')">▧</button><button class="attach" title="Voice" onclick="startVoice()">♩</button></div><textarea id="prompt" placeholder="Message Realm AI..." rows="2"></textarea><div class="composer-bottom"><span class="mode">Realm Smart</span><span class="mode">Tools ready</span><button class="send" id="send">↑</button></div></div><div class="disclaimer">Realm AI can make mistakes. Please verify important information.</div></div></div><aside class="chat-tools"><div class="card"><div class="side-card-title">Suggested actions</div><button class="tool-row" onclick="document.getElementById('prompt').value='Create a detailed 7-day study plan';document.getElementById('prompt').focus()"><div class="sq">▤</div><div><b>Study plan</b><span>Make a structured plan</span></div></button><button class="tool-row" onclick="openUpload()"><div class="sq">◈</div><div><b>Analyze file</b><span>Upload and ask questions</span></div></button><button class="tool-row" onclick="showView('agent')"><div class="sq">✦</div><div><b>Agent task</b><span>Run a multi-step goal</span></div></button></div><div class="card"><div class="side-card-title">Model</div><div class="notice">Realm Smart gives fast, helpful answers powered by Google Gemini. Your chats are saved on this device.</div></div></aside></div></section>
 
-<section class="view" id="agentView"><div class="page"><div class="page-title"><div class="eyebrow"><i></i> Agent workspace</div><h1>Give Realm AI a goal.</h1><p>Plan → execute approved tools → verify → report. Describe a goal and Realm AI will plan and complete it step by step.</p></div><div class="workspace"><div class="card workspace-main"><textarea class="textarea" id="agentTask" placeholder="Example: Research a topic, organize the findings, summarize them, and create a clean action plan..."></textarea><div class="toolbar"><button class="primary" onclick="runAgent()">Run agent →</button><button class="toolbtn" onclick="toast('Custom tools are coming soon.')">+ Add tool</button><button class="toolbtn" onclick="toast(\'Permissions will be available with tools.\')">⚙ Permissions</button></div><div id="agentStatus" class="notice" style="margin-top:12px">No task running.</div></div><aside class="card workspace-side"><div class="side-card-title">Agent pipeline</div><div class="check"><i></i><span>Understand the goal</span></div><div class="check"><i></i><span>Create a plan</span></div><div class="check"><i></i><span>Call approved tools</span></div><div class="check"><i></i><span>Check outputs</span></div><div class="check"><i></i><span>Return the result</span></div><div class="notice" style="margin-top:14px">Realm Agent plans and reasons step by step. Connected tools are coming soon.</div></aside></div></div></section>
+<section class="view" id="agentView"><div class="page"><div class="page-title"><div class="eyebrow"><i></i> Agent workspace</div><h1>Give Realm AI a goal.</h1><p>Plan → execute approved tools → verify → report. Describe a goal and Realm AI will plan and complete it step by step.</p></div><div class="workspace"><div class="card workspace-main"><textarea class="textarea" id="agentTask" placeholder="Example: Research a topic, organize the findings, summarize them, and create a clean action plan..."></textarea><div class="toolbar"><button class="primary" onclick="runAgent()">Run agent →</button><button class="toolbtn" onclick="toast('Custom tools are coming soon.')">+ Add tool</button><button class="toolbtn" onclick="toast(\'Permissions will be available with tools.\')">⚙ Permissions</button></div><div class="toolbar" style="margin-top:8px"><label style="font-size:10px;color:#7f8ca5;flex:1">Extra context for the agent (files, constraints, audience)<textarea class="input" id="agentContext" rows="2" placeholder="e.g. Audience: my non-technical cousin. Budget: PKR 50,000. Do not suggest paid tools."></textarea></label></div>
+<div id="agentStatus" class="notice" style="margin-top:12px;font-size:12px;line-height:1.6">No task running.</div>
+<div id="agentSteps" class="agent-steps"></div>
+<div id="agentResult" class="answer" style="margin-top:12px"></div>
+<div class="toolbar" style="margin-top:8px"><button class="toolbtn" id="agentStop" onclick="stopAgent()" style="display:none">Stop</button><button class="toolbtn" id="agentCopy" onclick="copyAgentResult()" style="display:none">Copy result</button><span id="agentTimer" style="font-size:10px;color:#7f8ca5;align-self:center"></span></div></div><aside class="card workspace-side"><div class="side-card-title">Agent pipeline</div><div class="check"><i></i><span>Understand the goal</span></div><div class="check"><i></i><span>Create a plan</span></div><div class="check"><i></i><span>Call approved tools</span></div><div class="check"><i></i><span>Check outputs</span></div><div class="check"><i></i><span>Return the result</span></div><div class="notice" style="margin-top:14px">Realm Agent plans and reasons step by step. Connected tools are coming soon.</div></aside></div></div></section>
 
 <section class="view" id="filesView"><div class="page"><div class="page-title"><div class="eyebrow"><i></i> File intelligence</div><h1>Your files, ready for AI.</h1><p>Upload text-based files and ask Realm AI about them in Chat.</p></div><div class="card workspace-main"><div class="big-upload" id="bigUpload" onclick="document.getElementById('fileInput').click()"><div style="font-size:28px">⇧</div><strong>Drop files here or click to browse</strong><div style="margin-top:5px">PDF · DOCX · TXT · PNG · JPG · up to your configured limit</div></div><input id="fileInput" type="file" class="hidden" multiple accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" onchange="renderFiles(this.files)"/><div id="fileList"></div><div class="notice" style="margin-top:12px">The browser can select files now. Do not store private customer files on the public frontend; the final version will upload them to authenticated backend storage.</div></div></div></section>
 
@@ -298,14 +313,76 @@ window.renderFiles=function(files,modal){
   else if(files.length)toast('Only text-based files can be read right now (.txt, .md, .csv, .json, code).');
 };
 
-/* Agent */
+/* Agent — runs through /api/agent, one phase per request (plan → steps → verify).
+   One request = one model call, so a long job survives proxy/function timeouts, shows real
+   progress, and can be stopped or retried at the step that failed. */
+let agentRun=null;
+function agentEl(id){return $(id)}
+function renderAgentSteps(){
+  const box=agentEl('agentSteps');if(!box)return;
+  const r=agentRun;
+  if(!r){box.innerHTML='';return}
+  box.innerHTML=r.steps.map((st,i)=>{
+    const cls=r.stepsState[i]==='run'?'run':r.stepsState[i]==='done'?'done':r.stepsState[i]==='fail'?'fail':'';
+    const out=r.outputs[i]?'<div class="out">'+md(r.outputs[i])+'</div>':'';
+    return '<div class="agent-step '+cls+'"><div class="dot"></div><div style="flex:1"><b>'+(i+1)+'. '+esc(st.title||('Step '+(i+1)))+'</b>'+(st.detail?'<p>'+esc(st.detail)+'</p>':'')+out+'</div></div>';
+  }).join('');
+}
+function agentStatus(msg,kind){const el=agentEl('agentStatus');if(el){el.textContent=msg;el.className='notice'+(kind==='err'?' warn':'')}}
+window.stopAgent=function(){if(!agentRun)return;agentRun.cancelled=true;agentStatus('Stopping after the current step…')};
+window.copyAgentResult=function(){const t=(agentRun&&agentRun.final)||'';if(!t)return toast('Nothing to copy yet');navigator.clipboard?.writeText(t);toast('Result copied')};
+async function agentApi(body){
+  const r=await fetch('/api/agent',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body)});
+  const isJson=(r.headers.get('content-type')||'').indexOf('json')>-1;
+  const d=isJson?await r.json().catch(()=>({})):{error:'non-JSON response'};
+  if(!r.ok){const e=new Error(d.error||('Agent request failed (HTTP '+r.status+').'));e.code=d.code;throw e}
+  return d;
+}
 window.runAgent=async function(){
-  const t=$('agentTask').value.trim(),s=$('agentStatus');if(!t){s.textContent='Describe a goal first.';return}
-  s.className='answer';s.innerHTML='<span class="typing"><i></i><i></i><i></i></span> Planning and working…';
-  try{const r=await callAI([{role:'user',content:'You are Realm Agent, an autonomous assistant. For the goal below: 1) write a short numbered plan, 2) carry out each step and show the work, 3) finish with a "Result" section with the final deliverable.\n\nGoal: '+t}]);await reveal(s,r)}
-  catch(e){s.textContent=e.message}
+  if(agentRun&&!agentRun.done){agentStatus('A run is already in progress — stop it first.');return}
+  const goal=(agentEl('agentTask').value||'').trim();
+  if(!goal){agentStatus('Describe a goal first.');return}
+  const context=(agentEl('agentContext').value||'').trim();
+  agentRun={goal,context,steps:[],stepsState:[],outputs:[],deliverable:'',final:'',done:false,cancelled:false,started:Date.now()};
+  agentEl('agentResult').innerHTML='';agentEl('agentCopy').style.display='none';agentEl('agentStop').style.display='';
+  const timer=setInterval(()=>{const el=agentEl('agentTimer');if(el&&agentRun)el.textContent='running · '+Math.round((Date.now()-agentRun.started)/1000)+'s'},1000);
+  const finish=()=>{clearInterval(timer);const el=agentEl('agentTimer');if(el)el.textContent='';if(agentRun)agentRun.done=true;const b=agentEl('agentStop');if(b)b.style.display='none'};
+  try{
+    agentStatus('Planning the work…');
+    const plan=await agentApi({phase:'plan',goal,context});
+    if(agentRun.cancelled){agentStatus('Stopped.');return finish()}
+    agentRun.steps=plan.steps||[];agentRun.deliverable=plan.deliverable||'';
+    agentRun.stepsState=agentRun.steps.map(()=>'wait');
+    if(plan.missing){agentStatus('The agent needs something first: '+plan.missing);renderAgentSteps()}
+    renderAgentSteps();
+    for(let i=0;i<agentRun.steps.length;i++){
+      if(agentRun.cancelled){agentStatus('Stopped after '+(agentRun.outputs.filter(Boolean).length)+' of '+agentRun.steps.length+' steps.');return finish()}
+      agentRun.stepsState[i]='run';renderAgentSteps();
+      agentStatus('Step '+(i+1)+' of '+agentRun.steps.length+' · '+esc(agentRun.steps[i].title||''));
+      try{
+        const step=await agentApi({phase:'step',goal,context,deliverable:agentRun.deliverable,steps:agentRun.steps,stepIndex:i,outputs:agentRun.outputs});
+        agentRun.outputs[i]=step.output||'';agentRun.stepsState[i]='done';
+      }catch(e){
+        agentRun.stepsState[i]='fail';agentRun.outputs[i]='';
+        renderAgentSteps();
+        agentStatus('Step '+(i+1)+' failed: '+(e.message||e)+' — you can run it again with the same plan.','err');
+        return finish();
+      }
+      renderAgentSteps();
+    }
+    agentStatus('Checking the result against the goal…');
+    const verdict=await agentApi({phase:'verify',goal,context,deliverable:agentRun.deliverable,steps:agentRun.steps,outputs:agentRun.outputs});
+    agentRun.final=verdict.final||'';
+    agentEl('agentResult').innerHTML=md(agentRun.final||'(no result)');
+    agentEl('agentCopy').style.display='';
+    agentStatus(verdict.verdict==='complete'?'Done — '+(agentRun.outputs.filter(Boolean).length)+' steps, verified against the goal.':('Finished with gaps: '+((verdict.gaps||[]).join('; ')||'review the result')));
+    renderAgentSteps();
+  }catch(e){
+    if(e&&e.code==='AI_NOT_CONFIGURED'){agentStatus('The AI backend is not connected yet. Open Settings to add a key for testing on this device, or deploy /api/agent with GEMINI_API_KEY.','err');const box=agentEl('agentResult');if(box)box.innerHTML='<button class="toolbtn" onclick="showView(\'settings\')">Open Settings</button>'}
+    else agentStatus('Agent stopped: '+(e.message||e),'err');
+  }
+  finish();
 };
-window.runAgentDemo=window.runAgent;
 
 /* Code */
 let cmode='Answer this coding request';

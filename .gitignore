@@ -1,5 +1,6 @@
 # local secrets for `npm run dev` — never commit
 .dev.vars
+.dev.vars.bak
 .env
 .env.*
 !.env.example
