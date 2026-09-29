@@ -22,7 +22,8 @@
     "setup": "node scripts/setup.mjs doctor",
     "setup:gemini": "node scripts/setup.mjs gemini",
     "setup:paddle": "node scripts/setup.mjs paddle",
-    "mock:webhook": "node scripts/mock-webhook.mjs"
+    "mock:webhook": "node scripts/mock-webhook.mjs",
+    "secrets:netlify": "netlify env:list"
   },
   "repository": {
     "type": "git",

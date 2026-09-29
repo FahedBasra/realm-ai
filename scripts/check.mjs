@@ -198,10 +198,24 @@ if (exists('netlify.toml')) {
 for (const [file, pattern, note] of [
   ['public/sitemap.xml', /YOUR-DOMAIN/, 'sitemap.xml still points at YOUR-DOMAIN — replace it before submitting to Google Search Console'],
   ['public/robots.txt', /YOUR-DOMAIN/, 'robots.txt still points at YOUR-DOMAIN'],
-  ['public/index.html', /YOUR-DOMAIN/, 'index.html still has YOUR-DOMAIN in canonical/og:url — the runtime fallback fixes social previews, but set the real domain for Search Console'],
+  // only the URL form counts: index.html also contains a /YOUR-DOMAIN/ test, which is the
+  // runtime fixer that keeps canonical + og:url correct on preview deploys
+  ['public/index.html', /["'= ]https?:\/\/YOUR-DOMAIN/, 'index.html still has an https://YOUR-DOMAIN canonical/og:url — set the live host for Search Console'],
   ['public/tiers.js', /pri_REPLACE_ME/, 'tiers.js still has pri_REPLACE_ME — the pricing page stays in preview mode until real Paddle price IDs are set']
 ]) {
   if (pattern.test(read(file))) warnings.push(`${file}: ${note}`);
+}
+
+// A sitemap Google fetches from one host must describe that same host, or the site gets ignored.
+const hostOf = (file, re) => {
+  const m = re.exec(read(file));
+  return m ? m[1] : null;
+};
+const robotsHost = hostOf('public/robots.txt', /Sitemap:\s*https?:\/\/([^/\s<]+)/);
+const sitemapHost = hostOf('public/sitemap.xml', /<loc>https?:\/\/([^/\s<]+)/);
+const canonicalHost = hostOf('public/index.html', /rel="canonical" href="https?:\/\/([^/"]+)/);
+for (const [a, b, label] of [[robotsHost, sitemapHost, 'robots.txt Sitemap vs sitemap.xml'], [canonicalHost, sitemapHost, 'index.html canonical vs sitemap.xml']]) {
+  if (a && b && a !== b) warnings.push(`${label} disagree (${a} vs ${b}) — pick one live host for all SEO files`);
 }
 // A pasted key in the page is the single most dangerous slip; assignment-style strings are enough.
 if (/(?:GEMINI_API_KEY|apiKey|api_key|PADDLE_CLIENT_TOKEN)\s*[:=]\s*['"][A-Za-z0-9_\-]{16,}['"]/.test(html) && !PLACEHOLDER.test(html)) {

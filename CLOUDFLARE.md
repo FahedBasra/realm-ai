@@ -119,6 +119,14 @@ answer. One deploy each, one shared codebase (`shared/api.js`), nothing to rewri
    npx wrangler secret put GEMINI_API_KEY
    npx wrangler deploy            # → https://realm-ai.<account>.workers.dev
    ```
+   Workers has no duration ceiling like Netlify's free plan, so this is also the host to use for long
+   answers. Add billing secrets here too if the API lives here:
+   ```bash
+   printf 'sandbox' | npx wrangler secret put PADDLE_ENV   # or paste at the prompt wrangler shows
+   npx wrangler secret put PADDLE_CLIENT_TOKEN                # test_…
+   npx wrangler secret put PADDLE_API_KEY                     # pdl_sdbx… → enables /api/checkout-status
+   npx wrangler secret put PADDLE_WEBHOOK_SECRET              # trl_… from Paddle
+   ```
 2. Allow the Netlify origin to call it (otherwise the browser blocks the response):
    ```bash
    npx wrangler secret put ALLOWED_ORIGINS     # value: https://reralm-ai.netlify.app

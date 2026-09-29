@@ -50,16 +50,26 @@ nobody can accidentally set the wrong publish directory again:
 
 ## Two settings to fix in your `reralm-ai` site
 
-I could see these from the outside while testing this branch:
+These two are the difference between "deployed" and "reachable by a customer" — nobody outside your Netlify
+account can open the site until #1 is off (verified from outside on 2026-09-29: `https://reralm-ai.netlify.app/api/health`
+answers with Netlify's sign-in wall instead of the app):
 
-1. **Deploy previews are password-protected.** `https://deploy-preview-1--reralm-ai.netlify.app/`
-   currently answers with Netlify's "This site is private — sign in" wall. For a product you are showing
-   people, go to **Site configuration → Access & security control → Visitor access / Password protection**
-   and set it to only protect branch deploys, or disable it. (Otherwise every shareable preview link looks
-   broken to the visitor.)
+1. **Visitor access / password protection is ON for the whole site.** Every URL — production and previews —
+   answers with Netlify's "This site is private — sign in" wall. Go to
+   **Site configuration → Access & security control → Password protection** → turn it off
+   (or scope it to branch deploys only). This one toggle is why the site looks broken to a visitor even
+   though the deploy is green. Then confirm from a phone (mobile data, not logged into Netlify):
+   `https://reralm-ai.netlify.app/api/health` should print JSON.
+   *Why it was on:* Netlify enables "Deploy protected" for some GitHub-imported sites by default — it is not
+   something you did wrong, but it does have to be switched off manually.*
 2. **The site name has a typo** (`reralm-ai`). Site configuration → General → Change site name →
    `realm-ai`, which also renames the free subdomain to `realm-ai.netlify.app` and every preview URL.
-   Old links stop working, so do it before you start sharing the URL.
+   Old links stop working, so do it **before** you start sharing the URL, then sync the SEO files to the
+   new host (this repo currently points canonical + sitemap at `reralm-ai.netlify.app`):
+   ```bash
+   sed -i 's#reralm-ai\.netlify\.app#realm-ai.netlify.app#g' public/robots.txt public/sitemap.xml public/index.html
+   npm run check && git commit -am "SEO: live host" && git push
+   ```
 
 ## Verify
 

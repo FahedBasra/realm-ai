@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Replace YOUR-DOMAIN with your live domain before submitting to Google Search Console. -->
+<!-- Live host: reralm-ai.netlify.app. Update it here, in robots.txt and in index.html when a custom domain arrives. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://YOUR-DOMAIN/</loc>
+    <loc>https://reralm-ai.netlify.app/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://YOUR-DOMAIN/welcome.html</loc>
+    <loc>https://reralm-ai.netlify.app/welcome.html</loc>
     <priority>0.3</priority>
   </url>
 </urlset>
